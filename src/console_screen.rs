@@ -41,7 +41,7 @@ impl Screen for ConsoleScreen {
         let draw = &mut self.draw as &mut dyn ScreenDraw;
         let f = async move {
             println!("request animation frame");
-            delay_for(Duration::new(1, 0)).await;
+            delay_for(Duration::new(0, 10000)).await;
             println!("request animation frame done");
             draw
         };
