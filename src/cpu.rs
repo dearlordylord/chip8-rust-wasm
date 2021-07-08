@@ -115,13 +115,15 @@ impl CPU {
     }
 
     pub async fn run(&mut self) {
-        self.delay_ref = Some(delay_for(Duration::new(1 / SPEED, 0)));
-        self.delay_ref.as_mut().unwrap().borrow_mut().await;
-        if !self.state.halted {
-            let screen_draw = self.screen.request_animation_frame().await;
-            CPU::cycle(&mut self.state, screen_draw);
-            self.run().await;
+        loop {
+            self.delay_ref = Some(delay_for(Duration::new(1 / SPEED, 0)));
+            self.delay_ref.as_mut().unwrap().borrow_mut().await;
+            if !self.state.halted {
+                let screen_draw = self.screen.request_animation_frame().await;
+                CPU::cycle(&mut self.state, screen_draw);
+            }
         }
+
     }
 
     pub fn stop(&mut self) {

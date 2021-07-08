@@ -9,13 +9,12 @@ use std::{println};
 use cpu::CPU;
 use crate::console_screen::ConsoleScreen;
 
-fn main() -> std::io::Result<()> {
+#[tokio::main]
+async fn main() -> std::io::Result<()> {
     let program = read_rom();
     let mut cpu = CPU::new(Box::new(ConsoleScreen::new()));
     cpu.load_program(program);
-    async {
-        cpu.run().await;
-    };
+    cpu.run().await;
     Ok(())
 }
 
