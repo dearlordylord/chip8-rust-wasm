@@ -21,6 +21,9 @@ impl ScreenDraw for ConsoleScreenDraw {
     fn repaint(&mut self) {
         println!("repaint");
     }
+    fn clear(&mut self) {
+        println!("clear");
+    }
 }
 
 impl ConsoleScreen {
@@ -36,7 +39,7 @@ impl ConsoleScreen {
 impl Screen for ConsoleScreen {
     fn request_animation_frame(&mut self) -> BoxFuture<&mut dyn ScreenDraw> {
         let draw = &mut self.draw as &mut dyn ScreenDraw;
-        let f = async {
+        let f = async move {
             println!("request animation frame");
             delay_for(Duration::new(1, 0)).await;
             println!("request animation frame done");

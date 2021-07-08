@@ -6,6 +6,7 @@ use ux::u4;
 pub trait ScreenDraw: std::marker::Send {
     fn toggle_pixel(&mut self, x: u4, y: u4);
     fn repaint(&mut self);
+    fn clear(&mut self);
 }
 
 pub trait Screen {
