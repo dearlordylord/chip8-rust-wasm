@@ -1,11 +1,10 @@
-use crate::screen::{Screen, ScreenDraw, IsCollision};
-use crate::cpu::{X, Y};
-use futures::{future::BoxFuture, FutureExt};
-use std::future::Future;
-use std::pin::Pin;
-use tokio::time::delay_for;
 use std::time::Duration;
-use ux::u4;
+
+use futures::{future::BoxFuture, FutureExt};
+use tokio::time::delay_for;
+
+use crate::cpu_instructions::{X, Y};
+use crate::screen::{IsCollision, Screen, ScreenDraw};
 
 pub struct ConsoleScreen {
     draw: ConsoleScreenDraw,

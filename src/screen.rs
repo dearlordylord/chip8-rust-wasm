@@ -1,8 +1,6 @@
-use std::future::Future;
-use futures::{future::BoxFuture, FutureExt};
-use std::pin::Pin;
-use ux::u4;
-use crate::cpu::{X, Y};
+use futures::{future::BoxFuture};
+
+use crate::cpu_instructions::{X, Y};
 
 pub struct IsCollision(pub bool);
 

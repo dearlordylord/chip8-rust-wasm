@@ -2,11 +2,11 @@ mod cpu;
 mod screen;
 mod console_screen;
 mod macros;
+mod cpu_decoder;
+mod cpu_instructions;
 
-use std::thread;
 use std::fs::File;
 use std::io::Read;
-use std::{println};
 use cpu::CPU;
 use crate::console_screen::ConsoleScreen;
 
