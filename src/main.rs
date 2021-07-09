@@ -1,6 +1,7 @@
 mod cpu;
 mod screen;
 mod console_screen;
+mod macros;
 
 use std::thread;
 use std::fs::File;

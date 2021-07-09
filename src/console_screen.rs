@@ -1,4 +1,5 @@
-use crate::screen::{Screen, ScreenDraw};
+use crate::screen::{Screen, ScreenDraw, IsCollision};
+use crate::cpu::{X, Y};
 use futures::{future::BoxFuture, FutureExt};
 use std::future::Future;
 use std::pin::Pin;
@@ -15,8 +16,9 @@ pub struct ConsoleScreenDraw {
 }
 
 impl ScreenDraw for ConsoleScreenDraw {
-    fn toggle_pixel(&mut self, x: u4, y: u4) {
-        println!("toggle pixel {} {}", x, y);
+    fn toggle_pixel(&mut self, x: X, y: Y) -> IsCollision {
+        println!("toggle pixel {} {}", x.0, y.0);
+        IsCollision(false)
     }
     fn repaint(&mut self) {
         println!("repaint");
