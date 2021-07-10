@@ -12,3 +12,4 @@ tokio = { version = "0.2.0", features = ["full"] }
 futures = "0.3"
 rand = "0.8.4"
 anyhow = "1.0"
+mockall = "0.10.1"

@@ -102,11 +102,11 @@ impl CPUState {
     fn fetch(&self) -> u16 {
         return u16::from_be_bytes([self.mem[self.pci()].0, self.mem[self.pci() + 1].0]);
     }
-    fn pci(&self) -> usize {
+    pub(crate) fn pci(&self) -> usize {
         let r: u16 = self.pc.0.into();
         return r.into();
     }
-    fn update_timers(&mut self) {
+    pub(crate) fn update_timers(&mut self) {
         if self.dt.0 > 0 {
             self.dt.0 = self.dt.0 - 1;
         }
@@ -126,10 +126,10 @@ impl CPUState {
     // }
 }
 
-pub struct CPU {
-    state: CPUState,
+pub struct CPU<'a> {
+    pub(crate) state: CPUState,
     delay_ref: Option<Delay>,
-    screen: Box<dyn Screen>,
+    screen: Box<dyn Screen + 'a>,
 }
 
 fn load_font_set(mem: &mut Mem) {
@@ -138,8 +138,8 @@ fn load_font_set(mem: &mut Mem) {
     }
 }
 
-impl CPU {
-    pub fn new(screen: Box<dyn Screen>) -> Self {
+impl<'a> CPU<'a> {
+    pub fn new(screen: Box<dyn Screen + 'a>) -> Self {
         let mut mem = [MemValue(0); MEM_SIZE];
         load_font_set(&mut mem);
         Self {
@@ -206,7 +206,7 @@ impl CPU {
         // }
     }
 
-    fn step(state: &mut CPUState, screen_draw: &mut dyn ScreenDraw) -> StepResult {
+    pub(crate) fn step(state: &mut CPUState, screen_draw: &mut dyn ScreenDraw) -> StepResult {
         let opcode = state.fetch();
         let op = decode(opcode)?;
         // TODO result type, error type
