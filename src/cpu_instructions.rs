@@ -82,7 +82,7 @@ pub fn ld_vx_vy(x: X, y: Y) -> Box<Instruction> {
 fn test_ld_vx_vy() {
     use super::test_utils::*;
     test_cycle(TestCycleParams {
-        op_code: 0x8000,
+        op_code: 0x8000 | 0 << 8 | 1 << 4,
         op_args: Option::Some(TestCycleOpArgs {
             x: X(0),
             y: Y(1),
