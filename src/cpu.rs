@@ -41,20 +41,30 @@ const FONTS: [MemPrimitive; FONTS_LENGTH] = [
     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 ];
 type MemPrimitive = u8;
+#[derive(Clone, Debug, Copy)]
 pub(crate) struct MemValue(pub(crate) MemPrimitive);
-newtype_copy!(MemValue);
+// newtype_copy!(MemValue);
 
 pub(crate) type Mem = [MemValue; MEM_SIZE];
+#[derive(Clone, Debug)]
 pub(crate) struct PC(pub(crate) u12);
+#[derive(Clone, Debug)]
 pub(crate) struct SP(pub(crate) u4);
+#[derive(Clone, Debug)]
 pub(crate) struct I(pub(crate) u12);
+#[derive(Debug)]
 pub(crate) struct V(pub(crate) MemPrimitive);
 newtype_copy!(V);
+#[derive(Clone, Debug)]
 pub(crate) struct DT(pub(crate) MemPrimitive);
+#[derive(Clone, Debug)]
 pub(crate) struct ST(pub(crate) MemPrimitive);
+#[derive(Clone, Debug)]
 pub(crate) struct Repaint(pub(crate) bool);
+#[derive(Clone, Debug)]
 pub(crate) struct Halted(pub(crate) bool);
 
+#[derive(Clone, Debug)]
 pub struct CPUState {
     pub(crate) mem: Mem,
     /*
@@ -87,6 +97,7 @@ pub struct CPUState {
 * @property {boolean} shift - If enabled, VX is shifted and VY remains unchanged (default: false)
 * @property {boolean} loadStore - If enabled, I is not incremented during load/store (default: false)
 */
+#[derive(Clone, Debug)]
 pub(crate) struct CPUQuirks {
     pub(crate) shift: bool,
     pub(crate) load_store: bool,

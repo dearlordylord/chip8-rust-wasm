@@ -26,6 +26,16 @@ pub fn sys() -> Box<Instruction> {
         state.inc_pc_2();
     });
 }
+
+#[test]
+fn test_sys() {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        op_code: 0x0666,
+        ..Default::default()
+    })
+}
+
 /**
  * <pre><code>00E0 - CLS</code></pre>
  * Clears the display.
@@ -35,6 +45,20 @@ pub fn cls() -> Box<Instruction> {
         screen_draw.clear();
         state.repaint.0 = true;
         state.inc_pc_2();
+    });
+}
+
+#[test]
+fn test_cls() {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        op_code: 0x00E0,
+        expectations: |s| {
+            let screen_draw = s.screen_draw;
+            screen_draw.expect_clear().return_const(());
+            screen_draw.expect_repaint().return_const(());
+        },
+        ..Default::default()
     });
 }
 
