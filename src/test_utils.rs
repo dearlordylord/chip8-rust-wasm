@@ -28,6 +28,12 @@ pub(crate) struct TestCycleOpArgs {
     pub(crate) y_val: V,
     pub(crate) byte: V,
     pub(crate) result: V,
+    pub(crate) exp_x: V,
+    pub(crate) exp_y: V,
+    pub(crate) reg_f: V,
+    pub(crate) carry: bool,
+    pub(crate) no_borrow: bool,
+    pub(crate) quirks_enabled: bool,
 }
 
 impl Default for TestCycleOpArgs {
@@ -39,6 +45,12 @@ impl Default for TestCycleOpArgs {
             y_val: V(0),
             byte: V(0),
             result: V(0),
+            carry: false,
+            no_borrow: false,
+            quirks_enabled: false,
+            exp_x: V(0),
+            exp_y: V(0),
+            reg_f: V(0)
         }
     }
 }
