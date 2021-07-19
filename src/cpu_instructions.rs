@@ -107,6 +107,7 @@ fn test_ld_vx_vy() {
         ..Default::default()
     });
 }
+
 /**
  * <pre><code>6xkk - LD Vx, kk</code></pre>
  * Set Vx = kk
@@ -115,6 +116,24 @@ pub fn ld_vx_kk(x: X, kk: KK) -> Box<Instruction> {
     return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn ScreenDraw| {
         state.v[x.0].0 = kk.0;
         state.inc_pc_2();
+    });
+}
+
+#[test]
+fn test_ld_vx_kk() {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        op_code: 0x6000 | 9 << 8 | 0xFF,
+        op_args: Option::Some(TestCycleOpArgs {
+            x: X(9),
+            byte: V(0xFF),
+            ..Default::default()
+        }),
+        post_fn: Some(|state, _s, args| {
+            let args = args.unwrap();
+            assert_eq!(state.v[args.x.0].0, args.byte.0);
+        }),
+        ..Default::default()
     });
 }
 
@@ -139,19 +158,17 @@ fn test_or_vx_vy() {
             y: Y(2),
             x_val: V(0xBB),
             y_val: V(0xCC),
-            result: Some(V(0xFF)),
+            result: V(0xFF),
+            ..Default::default()
         }),
         pre_fn: Some(|cpu, args| {
             let args = args.unwrap();
             cpu.state.v[args.x.0] = args.x_val;
             cpu.state.v[args.y.0] = args.y_val;
         }),
-        expectations: |s| {
-
-        },
-        post_fn: Some(|state, s, args| {
+        post_fn: Some(|state, _s, args| {
             let args = args.unwrap();
-            assert_eq!(state.v[args.x.0].0, args.result.unwrap().0);
+            assert_eq!(state.v[args.x.0].0, args.result.0);
             assert_eq!(state.v[args.y.0].0, args.y_val.0);
         }),
         ..Default::default()

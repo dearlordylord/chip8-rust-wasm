@@ -26,7 +26,8 @@ pub(crate) struct TestCycleOpArgs {
     pub(crate) y: Y,
     pub(crate) x_val: V,
     pub(crate) y_val: V,
-    pub(crate) result: Option<V>,
+    pub(crate) byte: V,
+    pub(crate) result: V,
 }
 
 impl Default for TestCycleOpArgs {
@@ -36,7 +37,8 @@ impl Default for TestCycleOpArgs {
             y: Y(0),
             x_val: V(0),
             y_val: V(0),
-            result: None,
+            byte: V(0),
+            result: V(0),
         }
     }
 }
