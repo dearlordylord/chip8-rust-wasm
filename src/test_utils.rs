@@ -26,6 +26,19 @@ pub(crate) struct TestCycleOpArgs {
     pub(crate) y: Y,
     pub(crate) x_val: V,
     pub(crate) y_val: V,
+    pub(crate) result: Option<V>,
+}
+
+impl Default for TestCycleOpArgs {
+    fn default() -> Self {
+        Self {
+            x: X(0),
+            y: Y(0),
+            x_val: V(0),
+            y_val: V(0),
+            result: None,
+        }
+    }
 }
 
 pub(crate) struct TestCycleParams {

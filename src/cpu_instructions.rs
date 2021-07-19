@@ -87,7 +87,8 @@ fn test_ld_vx_vy() {
             x: X(0),
             y: Y(1),
             x_val: V(0xAA),
-            y_val: V(0xBB)
+            y_val: V(0xBB),
+            ..Default::default()
         }),
         pre_fn: Some(|cpu, args| {
             let args = args.unwrap();
@@ -125,6 +126,35 @@ pub fn or_vx_vy(x: X, y: Y) -> Box<Instruction> {
     return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn ScreenDraw| {
         state.v[x.0].0 = state.v[x.0].0 | state.v[y.0].0;
         state.inc_pc_2();
+    });
+}
+
+#[test]
+fn test_or_vx_vy() {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        op_code: 0x8001 | 1 << 8 | 2 << 4,
+        op_args: Option::Some(TestCycleOpArgs {
+            x: X(1),
+            y: Y(2),
+            x_val: V(0xBB),
+            y_val: V(0xCC),
+            result: Some(V(0xFF)),
+        }),
+        pre_fn: Some(|cpu, args| {
+            let args = args.unwrap();
+            cpu.state.v[args.x.0] = args.x_val;
+            cpu.state.v[args.y.0] = args.y_val;
+        }),
+        expectations: |s| {
+
+        },
+        post_fn: Some(|state, s, args| {
+            let args = args.unwrap();
+            assert_eq!(state.v[args.x.0].0, args.result.unwrap().0);
+            assert_eq!(state.v[args.y.0].0, args.y_val.0);
+        }),
+        ..Default::default()
     });
 }
 
