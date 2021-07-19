@@ -5,14 +5,19 @@ use crate::cpu::{CPUState, I, V};
 
 pub type Instruction = dyn Fn(&mut CPUState, &mut dyn ScreenDraw);
 
+#[derive(Clone, Debug)]
 pub struct X(pub usize);
 
+#[derive(Clone, Debug)]
 pub struct Y(pub usize);
 
+#[derive(Clone, Debug)]
 pub struct KK(pub u8);
 
+#[derive(Clone, Debug)]
 pub struct NNN(pub u12);
 
+#[derive(Clone, Debug)]
 pub struct N(pub u16);
 
 /**
@@ -73,6 +78,34 @@ pub fn ld_vx_vy(x: X, y: Y) -> Box<Instruction> {
     });
 }
 
+#[test]
+fn test_ld_vx_vy() {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        op_code: 0x8000,
+        op_args: Option::Some(TestCycleOpArgs {
+            x: X(0),
+            y: Y(1),
+            x_val: V(0xAA),
+            y_val: V(0xBB)
+        }),
+        pre_fn: Some(|cpu, args| {
+            let args = args.unwrap();
+            cpu.state.v[args.x.0] = args.x_val;
+            cpu.state.v[args.y.0] = args.y_val;
+        }),
+        expectations: |s| {
+
+        },
+        post_fn: Some(|state, s, args| {
+            let args = args.unwrap();
+            let state_vy = state.v[args.y.0].0.clone();
+            assert_eq!(state.v[args.x.0].0, state_vy);
+            assert_eq!(state_vy, args.y_val.0);
+        }),
+        ..Default::default()
+    });
+}
 /**
  * <pre><code>6xkk - LD Vx, kk</code></pre>
  * Set Vx = kk
