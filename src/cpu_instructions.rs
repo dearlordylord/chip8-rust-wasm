@@ -95,9 +95,6 @@ fn test_ld_vx_vy() {
             cpu.state.v[args.x.0] = args.x_val;
             cpu.state.v[args.y.0] = args.y_val;
         }),
-        expectations: |s| {
-
-        },
         post_fn: Some(|state, s, args| {
             let args = args.unwrap();
             let state_vy = state.v[args.y.0].0.clone();
@@ -612,10 +609,15 @@ fn test_sne_vx_kk() {
 
 #[cfg(test)]
 fn test_sne_vx_kk_inner(x: u16, x_val: u8, byte: u8, pc_offset: u16) {
+    test_snx_vx_kk_inner(x, x_val, byte, pc_offset, 0x4000);
+}
+
+#[cfg(test)]
+fn test_snx_vx_kk_inner(x: u16, x_val: u8, byte: u8, pc_offset: u16, op_code: u16) {
     use super::test_utils::*;
     test_cycle(TestCycleParams {
         expect_inc: false,
-        op_code: 0x4000 | x << 8 | (byte as u16),
+        op_code: op_code | x << 8 | (byte as u16),
         op_args: Option::Some(TestCycleOpArgs {
             x: X(x as usize),
             x_val: V(x_val),
@@ -650,6 +652,17 @@ pub fn se_vx_kk(x: X, kk: KK) -> Box<Instruction> {
     });
 }
 
+#[test]
+fn test_se_vx_kk() {
+    test_se_vx_kk_inner(0xA, 0x60, 0x60, 4);
+    test_se_vx_kk_inner(0xA, 0x30, 0x60, 2);
+}
+
+#[cfg(test)]
+fn test_se_vx_kk_inner(x: u16, x_val: u8, byte: u8, pc_offset: u16) {
+    test_snx_vx_kk_inner(x, x_val, byte, pc_offset, 0x3000);
+}
+
 /**
  * <pre><code>5xy0 - SE Vx, Vy</code></pre>
  * Skip next instruction if Vx = Vy.
@@ -660,6 +673,42 @@ pub fn se_vx_vy(x: X, y: Y) -> Box<Instruction> {
             state.inc_pc_2();
         }
         state.inc_pc_2();
+    });
+}
+
+#[test]
+fn test_se_vx_vy() {
+    test_se_vx_vy_inner(8, 9, 20, 20, 4);
+    test_se_vx_vy_inner(8, 9, 20, 40, 2);
+}
+
+#[cfg(test)]
+fn test_se_vx_vy_inner(x: u16, y: u16, x_val: u8, y_val: u8, pc_offset: u16) {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        expect_inc: false,
+        op_code: 0x5000 | x.clone() << 8 | y.clone() << 4,
+        op_args: Option::Some(TestCycleOpArgs {
+            x: X(x as usize),
+            y: Y(y as usize),
+            x_val: V(x_val),
+            y_val: V(y_val),
+            pc_offset: PC(u12::new(pc_offset)),
+            ..Default::default()
+        }),
+        pre_fn: Some(|cpu, args| {
+            let args = args.unwrap();
+            cpu.state.v[args.x.0] = args.x_val;
+            cpu.state.v[args.y.0] = args.y_val;
+        }),
+        post_fn: Some(|state, scope, args| {
+            let args = args.unwrap();
+            let new_pc = scope.old_cpu_state.pc.0 + args.pc_offset.0;
+            assert_eq!(state.pc.0, new_pc);
+            assert_eq!(state.v[args.x.0].0, args.x_val.0);
+            assert_eq!(state.v[args.y.0].0, args.y_val.0);
+        }),
+        ..Default::default()
     });
 }
 
