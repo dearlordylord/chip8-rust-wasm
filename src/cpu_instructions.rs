@@ -1,7 +1,7 @@
 use ux::{u12, u4};
 
 use crate::screen::ScreenDraw;
-use crate::cpu::{CPUState, I, V};
+use crate::cpu::{CPUState, I, V, PC};
 
 pub type Instruction = dyn Fn(&mut CPUState, &mut dyn ScreenDraw);
 
@@ -337,9 +337,14 @@ fn test_sub_vx_vy() {
 
 #[cfg(test)]
 fn test_sub_vx_vy_inner(x: u16, y: u16, x_val: u8, y_val: u8, no_borrow: bool, result: u8) {
+    test_subx_vx_vy_inner(x, y, x_val, y_val, no_borrow, result, 0x8005);
+}
+
+#[cfg(test)]
+fn test_subx_vx_vy_inner(x: u16, y: u16, x_val: u8, y_val: u8, no_borrow: bool, result: u8, op_code: u16) {
     use super::test_utils::*;
     test_cycle(TestCycleParams {
-        op_code: 0x8005 | x.clone() << 8 | y.clone() << 4,
+        op_code: op_code | x.clone() << 8 | y.clone() << 4,
         op_args: Option::Some(TestCycleOpArgs {
             x: X(x as usize),
             y: Y(y as usize),
@@ -392,34 +397,7 @@ fn test_subn_vx_vy() {
 
 #[cfg(test)]
 fn test_subn_vx_vy_inner(x: u16, y: u16, x_val: u8, y_val: u8, no_borrow: bool, result: u8) {
-    use super::test_utils::*;
-    test_cycle(TestCycleParams {
-        op_code: 0x8007 | x.clone() << 8 | y.clone() << 4,
-        op_args: Option::Some(TestCycleOpArgs {
-            x: X(x as usize),
-            y: Y(y as usize),
-            x_val: V(x_val),
-            y_val: V(y_val),
-            result: V(result),
-            no_borrow,
-            ..Default::default()
-        }),
-        pre_fn: Some(|cpu, args| {
-            let args = args.unwrap();
-            cpu.state.v[args.x.0] = args.x_val;
-            cpu.state.v[args.y.0] = args.y_val;
-        }),
-        post_fn: Some(|state, _s, args| {
-            let args = args.unwrap();
-            assert_eq!(state.v[args.x.0].0, args.result.0);
-            assert_eq!(state.v[args.y.0].0, args.y_val.0);
-            assert_eq!(state.v[0xF].0, match args.no_borrow {
-                true => 1,
-                false => 0,
-            });
-        }),
-        ..Default::default()
-    });
+    test_subx_vx_vy_inner(x, y, x_val, y_val, no_borrow, result, 0x8007);
 }
 
 /**
@@ -454,33 +432,7 @@ fn test_shr_vx_vy_quirks_enabled() {
 
 #[cfg(test)]
 fn test_shr_vx_vy_inner(x: u16, y: u16, x_val: u8, y_val: u8, exp_x: u8, exp_y: u8, reg_f: u8, quirks_enabled: bool) {
-    use super::test_utils::*;
-    test_cycle(TestCycleParams {
-        op_code: 0x8006 | x.clone() << 8 | y.clone() << 4,
-        op_args: Option::Some(TestCycleOpArgs {
-            x: X(x as usize),
-            y: Y(y as usize),
-            x_val: V(x_val),
-            y_val: V(y_val),
-            exp_x: V(exp_x),
-            exp_y: V(exp_y),
-            reg_f: V(reg_f),
-            ..Default::default()
-        }),
-        pre_fn: Some(|cpu, args| {
-            let args = args.unwrap();
-            cpu.state.quirks.shift = args.quirks_enabled;
-            cpu.state.v[args.x.0] = args.x_val;
-            cpu.state.v[args.y.0] = args.y_val;
-        }),
-        post_fn: Some(|state, _s, args| {
-            let args = args.unwrap();
-            assert_eq!(state.v[args.x.0].0, args.exp_x.0);
-            assert_eq!(state.v[args.y.0].0, args.exp_y.0);
-            assert_eq!(state.v[0xF].0, args.reg_f.0)
-        }),
-        ..Default::default()
-    });
+    test_shx_vx_vy_inner(x, y, x_val, y_val, exp_x, exp_y, reg_f, quirks_enabled, 0x8006);
 }
 
 /**
@@ -501,6 +453,59 @@ pub fn shl_vx_vy(x: X, y: Y) -> Box<Instruction> {
     });
 }
 
+#[test]
+fn test_shl_vx_vy_quirks_disabled() {
+    test_shl_vx_vy_inner(0x4, 0x5, 0x22, 0x44, 0x88, 0x44, 0x0, false);
+    test_shl_vx_vy_inner(0x4, 0x5, 0x22, 0x45, 0x8A, 0x45, 0x0, false);
+    test_shl_vx_vy_inner(0x4, 6, 0x22, 0xFF, 0xFE, 0xFF, 0x1, false);
+    test_shl_vx_vy_inner(0x4, 7, 0x22, 0x7F, 0xFE, 0x7F, 0x0, false);
+}
+
+#[test]
+fn test_shl_vx_vy_quirks_enabled() {
+    test_shl_vx_vy_inner(0x4, 0x5, 0x44, 0x22, 0x88, 0x22, 0x0, true);
+    test_shl_vx_vy_inner(0x4, 0x5, 0x45, 0x22, 0x8A, 0x22, 0x0, true);
+    test_shl_vx_vy_inner(0x4, 6, 0xFF, 0x22, 0xFE, 0x22, 0x1, true);
+    test_shl_vx_vy_inner(0x4, 7, 0x7F, 0x22, 0xFE, 0x22, 0x0, true);
+}
+
+#[cfg(test)]
+fn test_shl_vx_vy_inner(x: u16, y: u16, x_val: u8, y_val: u8, exp_x: u8, exp_y: u8, reg_f: u8, quirks_enabled: bool) {
+    test_shx_vx_vy_inner(x, y, x_val, y_val, exp_x, exp_y, reg_f, quirks_enabled, 0x800E);
+}
+
+#[cfg(test)]
+fn test_shx_vx_vy_inner(x: u16, y: u16, x_val: u8, y_val: u8, exp_x: u8, exp_y: u8, reg_f: u8, quirks_enabled: bool, op_code: u16) {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        op_code: op_code | x.clone() << 8 | y.clone() << 4,
+        op_args: Option::Some(TestCycleOpArgs {
+            x: X(x as usize),
+            y: Y(y as usize),
+            x_val: V(x_val),
+            y_val: V(y_val),
+            exp_x: V(exp_x),
+            exp_y: V(exp_y),
+            reg_f: V(reg_f),
+            quirks_enabled,
+            ..Default::default()
+        }),
+        pre_fn: Some(|cpu, args| {
+            let args = args.unwrap();
+            cpu.state.quirks.shift = args.quirks_enabled;
+            cpu.state.v[args.x.0] = args.x_val;
+            cpu.state.v[args.y.0] = args.y_val;
+        }),
+        post_fn: Some(|state, _s, args| {
+            let args = args.unwrap();
+            assert_eq!(state.v[args.x.0].0, args.exp_x.0);
+            assert_eq!(state.v[args.y.0].0, args.exp_y.0);
+            assert_eq!(state.v[0xF].0, args.reg_f.0)
+        }),
+        ..Default::default()
+    });
+}
+
 /**
  * <pre><code>7xkk - ADD Vx, kk</code></pre>
  * Set Vx = Vx + kk.
@@ -509,6 +514,30 @@ pub fn add_vx_kk(x: X, kk: KK) -> Box<Instruction> {
     return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn ScreenDraw| {
         state.v[x.0].0 = state.v[x.0].0 + kk.0;
         state.inc_pc_2();
+    });
+}
+
+#[test]
+fn test_add_vx_kk() {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        op_code: 0x7000 | 0x8 << 8 | 0x55,
+        op_args: Option::Some(TestCycleOpArgs {
+            x: X(0x8),
+            x_val: V(0x30),
+            result: V(0x85),
+            byte: V(0x55),
+            ..Default::default()
+        }),
+        pre_fn: Some(|cpu, args| {
+            let args = args.unwrap();
+            cpu.state.v[args.x.0] = args.x_val;
+        }),
+        post_fn: Some(|state, _s, args| {
+            let args = args.unwrap();
+            assert_eq!(state.v[args.x.0].0, args.result.0);
+        }),
+        ..Default::default()
     });
 }
 
@@ -525,6 +554,43 @@ pub fn sne_vx_vy(x: X, y: Y) -> Box<Instruction> {
     });
 }
 
+#[test]
+fn test_sne_vx_vy() {
+    test_sne_vx_vy_inner(6, 7, 10, 10, 2);
+    test_sne_vx_vy_inner(6, 7, 10, 20, 4);
+}
+
+#[cfg(test)]
+fn test_sne_vx_vy_inner(x: u16, y: u16, x_val: u8, y_val: u8, pc_offset: u16) {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        expect_inc: false,
+        op_code: 0x9000 | x << 8 | y << 4,
+        op_args: Option::Some(TestCycleOpArgs {
+            x: X(x as usize),
+            y: Y(y as usize),
+            x_val: V(x_val),
+            y_val: V(y_val),
+            pc_offset: PC(u12::new(pc_offset)),
+            ..Default::default()
+        }),
+        pre_fn: Some(|cpu, args| {
+            let args = args.unwrap();
+            cpu.state.v[args.x.0] = args.x_val;
+            cpu.state.v[args.y.0] = args.y_val;
+        }),
+        post_fn: Some(|state, scope, args| {
+            let args = args.unwrap();
+            // wrapping?  expect(cpu.pc).toEqual((this.oldPc + params.pcOffset) & 0x0FFF);
+            let new_pc = scope.old_cpu_state.pc.0 + args.pc_offset.0;
+            assert_eq!(state.pc.0, new_pc);
+            assert_eq!(state.v[args.x.0].0, args.x_val.0);
+            assert_eq!(state.v[args.y.0].0, args.y_val.0);
+        }),
+        ..Default::default()
+    });
+}
+
 /**
  * <pre><code>4xkk - SNE Vx, kk</code></pre>
  * Skip next instruction if Vx != kk.
@@ -535,6 +601,39 @@ pub fn sne_vx_kk(x: X, kk: KK) -> Box<Instruction> {
             state.inc_pc_2();
         }
         state.inc_pc_2();
+    });
+}
+
+#[test]
+fn test_sne_vx_kk() {
+    test_sne_vx_kk_inner(6, 10, 10, 2);
+    test_sne_vx_kk_inner(8, 10, 60, 4);
+}
+
+#[cfg(test)]
+fn test_sne_vx_kk_inner(x: u16, x_val: u8, byte: u8, pc_offset: u16) {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        expect_inc: false,
+        op_code: 0x4000 | x << 8 | (byte as u16),
+        op_args: Option::Some(TestCycleOpArgs {
+            x: X(x as usize),
+            x_val: V(x_val),
+            byte: V(byte),
+            pc_offset: PC(u12::new(pc_offset)),
+            ..Default::default()
+        }),
+        pre_fn: Some(|cpu, args| {
+            let args = args.unwrap();
+            cpu.state.v[args.x.0] = args.x_val;
+        }),
+        post_fn: Some(|state, scope, args| {
+            let args = args.unwrap();
+            let new_pc = scope.old_cpu_state.pc.0 + args.pc_offset.0;
+            assert_eq!(state.pc.0, new_pc);
+            assert_eq!(state.v[args.x.0].0, args.x_val.0);
+        }),
+        ..Default::default()
     });
 }
 

@@ -1,6 +1,6 @@
 use crate::screen::*;
 use futures::{future::BoxFuture, future::ready};
-use crate::cpu::{CPU, MemValue, CPUState, V};
+use crate::cpu::{CPU, MemValue, CPUState, V, PC};
 use ux::u12;
 use crate::cpu_instructions::{X, Y};
 
@@ -34,6 +34,7 @@ pub(crate) struct TestCycleOpArgs {
     pub(crate) carry: bool,
     pub(crate) no_borrow: bool,
     pub(crate) quirks_enabled: bool,
+    pub(crate) pc_offset: PC,
 }
 
 impl Default for TestCycleOpArgs {
@@ -50,7 +51,8 @@ impl Default for TestCycleOpArgs {
             quirks_enabled: false,
             exp_x: V(0),
             exp_y: V(0),
-            reg_f: V(0)
+            reg_f: V(0),
+            pc_offset: PC(u12::new(0)),
         }
     }
 }
@@ -90,9 +92,10 @@ pub(crate) fn test_cycle(params: TestCycleParams) {
         None => {}
     }
     let mut screen_draw2 = MockScreenDraw::new();
+    let old_cpu_state = cpu.state.clone();
     (params.expectations)(TestScope {
         screen_draw: &mut screen_draw2,
-        old_cpu_state: cpu.state.clone(),
+        old_cpu_state: old_cpu_state.clone(),
     });
     let old_pc = cpu.state.pc.0;
     CPU::step(&mut cpu.state, &mut screen_draw2).expect("expected to run successfully");
@@ -100,12 +103,15 @@ pub(crate) fn test_cycle(params: TestCycleParams) {
     match params.post_fn {
         Some(f) => f(&cpu.state, TestScope {
             screen_draw: &mut screen_draw2,
-            old_cpu_state: cpu.state.clone(),
+            old_cpu_state: old_cpu_state.clone(),
         }, params.op_args.clone()),
         None => {}
     }
-    assert_eq!(cpu.state.pc.0, old_pc + u12::new(match params.expect_inc {
-        true => 2,
-        false => 0
-    }))
+    assert_eq!(cpu.state.pc.0, old_pc + match params.expect_inc {
+        true => u12::new(2),
+        false => match params.op_args {
+            None => u12::new(0),
+            Some(v) => v.pc_offset.0
+        }
+    })
 }
