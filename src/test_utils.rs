@@ -1,7 +1,7 @@
 use crate::screen::*;
 use futures::{future::BoxFuture, future::ready};
-use crate::cpu::{CPU, MemValue, CPUState, V, PC};
-use ux::u12;
+use crate::cpu::{CPU, MemValue, CPUState, V, PC, SP};
+use ux::{u12, u4};
 use crate::cpu_instructions::{X, Y};
 
 pub struct TestScreen<'a> {
@@ -35,6 +35,9 @@ pub(crate) struct TestCycleOpArgs {
     pub(crate) no_borrow: bool,
     pub(crate) quirks_enabled: bool,
     pub(crate) pc_offset: PC,
+    pub(crate) addr: PC,
+    pub(crate) stack: Vec<u12>,
+    pub(crate) sp: SP,
 }
 
 impl Default for TestCycleOpArgs {
@@ -53,6 +56,9 @@ impl Default for TestCycleOpArgs {
             exp_y: V(0),
             reg_f: V(0),
             pc_offset: PC(u12::new(0)),
+            addr: PC(u12::new(0)),
+            stack: vec![],
+            sp: SP(u4::new(0)),
         }
     }
 }
@@ -107,11 +113,7 @@ pub(crate) fn test_cycle(params: TestCycleParams) {
         }, params.op_args.clone()),
         None => {}
     }
-    assert_eq!(cpu.state.pc.0, old_pc + match params.expect_inc {
-        true => u12::new(2),
-        false => match params.op_args {
-            None => u12::new(0),
-            Some(v) => v.pc_offset.0
-        }
-    })
+    if params.expect_inc {
+        assert_eq!(cpu.state.pc.0, old_pc + u12::new(2));
+    }
 }

@@ -1,7 +1,7 @@
 use ux::{u12, u4};
 
 use crate::screen::ScreenDraw;
-use crate::cpu::{CPUState, I, V, PC};
+use crate::cpu::{CPUState, I, V, PC, SP};
 
 pub type Instruction = dyn Fn(&mut CPUState, &mut dyn ScreenDraw);
 
@@ -722,6 +722,30 @@ pub fn jp_nnn(nnn: NNN) -> Box<Instruction> {
     });
 }
 
+#[test]
+fn test_jp_nnn() {
+    test_jp_nnn_inner(0x0AAA);
+    test_jp_nnn_inner(0x0FFF);
+}
+
+#[cfg(test)]
+fn test_jp_nnn_inner(addr: u16) {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        expect_inc: false,
+        op_code: 0x1000 | addr,
+        op_args: Option::Some(TestCycleOpArgs {
+            addr: PC(u12::new(addr)),
+            ..Default::default()
+        }),
+        post_fn: Some(|state, scope, args| {
+            let args = args.unwrap();
+            assert_eq!(state.pc.0, args.addr.0);
+        }),
+        ..Default::default()
+    });
+}
+
 /**
  * <pre><code>00EE - RET</code></pre>
  * Return from a subroutine.
@@ -731,6 +755,41 @@ pub fn ret() -> Box<Instruction> {
         state.sp.0 = (state.sp.0 - u4::new(1)) & u4::new((state.stack.len() - 1) as u8);
         state.pc.0 = state.stack[u8::from(state.sp.0) as usize];
         state.inc_pc_2();
+    });
+}
+
+#[test]
+fn test_ret() {
+    test_ret_inner(vec![0x33], 1, 0x35);
+    test_ret_inner(vec![0xAA, 0xBB, 0xCC], 3, 0xCE);
+}
+
+#[cfg(test)]
+fn test_ret_inner(stack: Vec<u16>, sp: u8, expected_pc: u16) {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        expect_inc: false,
+        op_code: 0x00EE,
+        op_args: Option::Some(TestCycleOpArgs {
+            addr: PC(u12::new(expected_pc)),
+            stack: stack.iter().map(|x| u12::new(x.clone())).collect(),
+            sp: SP(u4::new(sp)),
+            ..Default::default()
+        }),
+        pre_fn: Some(|cpu, args| {
+            let args = args.unwrap();
+            for (i, x) in args.stack.iter().enumerate() {
+                cpu.state.stack[i] = x.clone();
+            }
+            cpu.state.sp = args.sp;
+
+        }),
+        post_fn: Some(|state, scope, args| {
+            let args = args.unwrap();
+            assert_eq!(state.pc.0, args.addr.0);
+            assert_eq!(state.sp.0, args.sp.0);
+        }),
+        ..Default::default()
     });
 }
 
