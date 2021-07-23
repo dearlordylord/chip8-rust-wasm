@@ -909,6 +909,28 @@ pub fn rnd_vx_kk(x: X, kk: KK) -> Box<Instruction> {
     });
 }
 
+#[test]
+fn test_rnd_vx_kk() {
+    test_rnd_vx_kk_inner(0xA);
+}
+
+#[cfg(test)]
+fn test_rnd_vx_kk_inner(x: u16) {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        op_code: 0xC000 | x << 8 | 1,
+        op_args: Option::Some(TestCycleOpArgs {
+            x: X(x as usize),
+            ..Default::default()
+        }),
+        post_fn: Some(|state, scope, args| {
+            let args = args.unwrap();
+            assert!([0u8, 1u8].contains(&state.v[args.x.0].0));
+        }),
+        ..Default::default()
+    });
+}
+
 /**
  * <pre><code>Fx33 - LD B, Vx</code></pre>
  * Store BCD representation of Vx in memory locations I, I+1, and I+2.
@@ -919,6 +941,40 @@ pub fn ld_b_vx(x: X) -> Box<Instruction> {
         state.mem[u16::from(state.i.0 + u12::new(1)) as usize].0 = state.v[x.0].0 % 100 / 10;
         state.mem[u16::from(state.i.0 + u12::new(2)) as usize].0 = state.v[x.0].0 % 10;
         state.inc_pc_2();
+    });
+}
+
+#[test]
+fn test_ld_b_vx() {
+    test_ld_b_vx_inner(0xA, 123, 0x0AAA, vec![1, 2, 3]);
+}
+
+#[cfg(test)]
+fn test_ld_b_vx_inner(x: u16, x_val: u8, i: u16, digits: Vec<u16>) {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        op_code: 0xF033 | x << 8,
+        op_args: Option::Some(TestCycleOpArgs {
+            x: X(x as usize),
+            x_val: V(x_val),
+            i: I(u12::new(i)),
+            digits: digits.iter().map(|d| d.clone() as u8).collect(),
+            ..Default::default()
+        }),
+        pre_fn: Some(|cpu, args| {
+            let args = args.unwrap();
+            cpu.state.i = args.i;
+            cpu.state.v[args.x.0] = args.x_val;
+        }),
+        post_fn: Some(|state, scope, args| {
+            let args = args.unwrap();
+            assert_eq!(state.i.0, args.i.0);
+            let i = u16::from(state.i.clone().0) as usize;
+            assert_eq!(state.mem[i].0, args.digits[0]);
+            assert_eq!(state.mem[i + 1].0, args.digits[1]);
+            assert_eq!(state.mem[i + 2].0, args.digits[2]);
+        }),
+        ..Default::default()
     });
 }
 
