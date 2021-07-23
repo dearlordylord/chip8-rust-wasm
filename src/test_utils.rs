@@ -36,8 +36,10 @@ pub(crate) struct TestCycleOpArgs {
     pub(crate) quirks_enabled: bool,
     pub(crate) pc_offset: PC,
     pub(crate) addr: PC,
+    pub(crate) expected_pc: PC,
     pub(crate) stack: Vec<u12>,
     pub(crate) sp: SP,
+    pub(crate) v0: V,
 }
 
 impl Default for TestCycleOpArgs {
@@ -57,8 +59,10 @@ impl Default for TestCycleOpArgs {
             reg_f: V(0),
             pc_offset: PC(u12::new(0)),
             addr: PC(u12::new(0)),
+            expected_pc: PC(u12::new(0)),
             stack: vec![],
             sp: SP(u4::new(0)),
+            v0: V(0),
         }
     }
 }

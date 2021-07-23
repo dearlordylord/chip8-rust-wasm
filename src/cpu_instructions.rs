@@ -752,8 +752,8 @@ fn test_jp_nnn_inner(addr: u16) {
  */
 pub fn ret() -> Box<Instruction> {
     return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn ScreenDraw| {
-        state.sp.0 = (state.sp.0 - u4::new(1)) & u4::new((state.stack.len() - 1) as u8);
-        state.pc.0 = state.stack[u8::from(state.sp.0) as usize];
+        state.pc.0 = state.stack[(u8::from(state.sp.0) - 1) as usize];
+        state.sp.0 = state.sp.0 - u4::new(1);
         state.inc_pc_2();
     });
 }
@@ -787,7 +787,7 @@ fn test_ret_inner(stack: Vec<u16>, sp: u8, expected_pc: u16) {
         post_fn: Some(|state, scope, args| {
             let args = args.unwrap();
             assert_eq!(state.pc.0, args.addr.0);
-            assert_eq!(state.sp.0, args.sp.0);
+            assert_eq!(state.sp.0, args.sp.0 - u4::new(1));
         }),
         ..Default::default()
     });
@@ -805,6 +805,33 @@ pub fn call_nnn(nnn: NNN) -> Box<Instruction> {
     });
 }
 
+#[test]
+fn test_call_nnn() {
+    test_call_nnn_inner(0xAA);
+    test_call_nnn_inner(0xBB);
+    test_call_nnn_inner(0xCC);
+}
+
+#[cfg(test)]
+fn test_call_nnn_inner(addr: u16) {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        expect_inc: false,
+        op_code: 0x2000 | addr,
+        op_args: Option::Some(TestCycleOpArgs {
+            addr: PC(u12::new(addr)),
+            ..Default::default()
+        }),
+        post_fn: Some(|state, scope, args| {
+            let args = args.unwrap();
+            assert_eq!(state.pc.0, args.addr.0);
+            assert_eq!(state.stack[u16::from(scope.old_cpu_state.sp.0) as usize], scope.old_cpu_state.pc.0);
+            assert_eq!(state.sp.0, scope.old_cpu_state.sp.0 + u4::new(1));
+        }),
+        ..Default::default()
+    });
+}
+
 /**
  * <pre><code>Annn - LD I, nnn</code></pre>
  * Set I = nnn.
@@ -816,13 +843,57 @@ pub fn ld_i_nnn(nnn: NNN) -> Box<Instruction> {
     });
 }
 
+#[test]
+fn test_ld_i_nnn() {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        op_code: 0xA000 | 0xCCC,
+        post_fn: Some(|state, scope, args| {
+            assert_eq!(state.i.0, u12::new(0xCCC));
+        }),
+        ..Default::default()
+    });
+}
+
 /**
  * <pre><code>Bnnn - JP V0, nnn</code></pre>
  * Jump to location nnn + V0.
  */
 pub fn jp_v0_nnn(nnn: NNN) -> Box<Instruction> {
     return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn ScreenDraw| {
-        state.pc.0 = (nnn.0 + u12::new(state.v[0].0 as u16)) & u12::new(0x0FFF);
+        // not sure if wrapping add but https://github.com/mir3z/chip8-emu/blob/master/test/spec/is.spec.js would pass in that case
+        state.pc.0 = (nnn.0.wrapping_add(u12::new(state.v[0].0 as u16)));
+    });
+}
+
+#[test]
+fn test_jp_v0_nnn() {
+    test_jp_v0_nnn_inner(0x44, 0x555, 0x599);
+    test_jp_v0_nnn_inner(0x1, 0xFFF, 0x000);
+}
+
+#[cfg(test)]
+fn test_jp_v0_nnn_inner(v0: u8, addr: u16, expected_pc: u16) {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        expect_inc: false,
+        op_code: 0xB000 | addr,
+        op_args: Option::Some(TestCycleOpArgs {
+            addr: PC(u12::new(addr)),
+            v0: V(v0),
+            expected_pc: PC(u12::new(expected_pc)),
+            ..Default::default()
+        }),
+        pre_fn: Some(|cpu, args| {
+           let args = args.unwrap();
+            cpu.state.v[0] = args.v0;
+        }),
+        post_fn: Some(|state, scope, args| {
+            let args = args.unwrap();
+            assert_eq!(state.pc.0, args.expected_pc.0);
+            assert_eq!(state.v[0].0, args.v0.0);
+        }),
+        ..Default::default()
     });
 }
 
