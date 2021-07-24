@@ -1,6 +1,6 @@
 use crate::screen::*;
 use futures::{future::BoxFuture, future::ready};
-use crate::cpu::{CPU, MemValue, CPUState, V, PC, SP, I};
+use crate::cpu::{CPU, MemValue, CPUState, V, PC, SP, I, DT};
 use ux::{u12, u4};
 use crate::cpu_instructions::{X, Y};
 
@@ -27,7 +27,7 @@ pub(crate) struct TestCycleOpArgs {
     pub(crate) x_val: V,
     pub(crate) y_val: V,
     pub(crate) byte: V,
-    pub(crate) result: V,
+    pub(crate) result: u16,
     pub(crate) exp_x: V,
     pub(crate) exp_y: V,
     pub(crate) reg_f: V,
@@ -41,7 +41,9 @@ pub(crate) struct TestCycleOpArgs {
     pub(crate) sp: SP,
     pub(crate) v0: V,
     pub(crate) i: I,
+    pub(crate) i_val: V,
     pub(crate) digits: Vec<u8>,
+    pub(crate) dt: DT,
 }
 
 impl Default for TestCycleOpArgs {
@@ -52,7 +54,7 @@ impl Default for TestCycleOpArgs {
             x_val: V(0),
             y_val: V(0),
             byte: V(0),
-            result: V(0),
+            result: 0,
             carry: false,
             no_borrow: false,
             quirks_enabled: false,
@@ -66,7 +68,9 @@ impl Default for TestCycleOpArgs {
             sp: SP(u4::new(0)),
             v0: V(0),
             i: I(u12::new(0)),
+            i_val: V(0),
             digits: vec![],
+            dt: DT(0),
         }
     }
 }
