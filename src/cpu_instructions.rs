@@ -1158,59 +1158,47 @@ pub fn ld_i_vx(x: X) -> Box<Instruction> {
 }
 
 #[test]
-fn test_ld_i_vx() {
-   /*
-       // LD I, Vx: 0xFx55
-    describe('LD I, Vx', function () {
-
-        it('when load/store quirks disabled', function () {
-            cpu.quirks.loadStore = false;
-            helpers.test_LD_I_Vx(cpu, { x: 0x5, iVal: 0x0A00, expectedIVal: 0x0A06,
-                regs: [ 0x5, 0x6, 0x7, 0x8, 0x9, 0xA ]
-            });
-            helpers.test_LD_I_Vx(cpu, { x: 0xF, iVal: 0x0A00, expectedIVal: 0x0A10,
-                regs: [ 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF ]
-            });
-        });
-
-        it('when load/store quirks enabled', function () {
-            cpu.quirks.loadStore = true;
-            helpers.test_LD_I_Vx(cpu, { x: 0x5, iVal: 0x0A00, expectedIVal: 0x0A00,
-                regs: [ 0x5, 0x6, 0x7, 0x8, 0x9, 0xA ]
-            });
-            helpers.test_LD_I_Vx(cpu, { x: 0xF, iVal: 0x0A00, expectedIVal: 0x0A00,
-                regs: [ 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF ]
-            });
-        });
-    });
-    */
+fn test_ld_i_vx_quirks_disabled() {
+    test_ld_i_vx_inner(0x5, 0x0A00, 0x0A06, vec![0x5, 0x6, 0x7, 0x8, 0x9, 0xA], false);
+    test_ld_i_vx_inner(0xF, 0x0A00, 0x0A10, vec![0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF], false);
 }
 
-// TODO https://github.com/mir3z/chip8-emu/blob/master/test/is.helpers.js#L471
+#[test]
+fn test_ld_i_vx_quirks_enabled() {
+    test_ld_i_vx_inner(0x5, 0x0A00, 0x0A00, vec![0x5, 0x6, 0x7, 0x8, 0x9, 0xA], true);
+    test_ld_i_vx_inner(0xF, 0x0A00, 0x0A00, vec![0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF], true);
+}
+
 #[cfg(test)]
-fn test_ld_i_vx_inner(x: u16, i: u16, i_expected: u16, regs: Vec<u4>) {
-    // use super::test_utils::*;
-    // test_cycle(TestCycleParams {
-    //     op_code: 0xF055 | x << 8,
-    //     op_args: Option::Some(TestCycleOpArgs {
-    //         x: X(x as usize),
-    //         x_val: V(x_val),
-    //         i: I(u12::new(i)),
-    //         result,
-    //         ..Default::default()
-    //     }),
-    //     pre_fn: Some(|cpu, args| {
-    //         let args = args.unwrap();
-    //         cpu.state.i.0 = args.i.0;
-    //         cpu.state.v[args.x.0 as usize] = args.x_val;
-    //     }),
-    //     post_fn: Some(|state, scope, args| {
-    //         let args = args.unwrap();
-    //         assert_eq!(state.i.0, u12::new(args.result));
-    //         assert_eq!(state.v[args.x.0].0, args.x_val.0);
-    //     }),
-    //     ..Default::default()
-    // });
+fn test_ld_i_vx_inner(x: u16, i_val: u16, i_expected: u16, regs: Vec<u8>, quirks_enabled: bool) {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        op_code: 0xF055 | x << 8,
+        op_args: Option::Some(TestCycleOpArgs {
+            x: X(x as usize),
+            i_val: u12::new(i_val),
+            i_expected: I(u12::new(i_expected)),
+            regs: regs.iter().map(|r| V(r.clone())).collect(),
+            quirks_enabled,
+            ..Default::default()
+        }),
+        pre_fn: Some(|cpu, args| {
+            let args = args.unwrap();
+            cpu.state.i.0 = args.i_val;
+            cpu.state.quirks.load_store = args.quirks_enabled;
+            for (i, x) in args.regs.iter().enumerate() {
+                cpu.state.v[i] = x.clone();
+            }
+        }),
+        post_fn: Some(|state, scope, args| {
+            let args = args.unwrap();
+            assert_eq!(state.i.0, args.i_expected.0);
+            for (i, x) in (0..args.x.0).enumerate() {
+                assert_eq!(state.mem[i + u16::from(args.i_val) as usize].0, state.v[i].0);
+            }
+        }),
+        ..Default::default()
+    });
 }
 
 /**
