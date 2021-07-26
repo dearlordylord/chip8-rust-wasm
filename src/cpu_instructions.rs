@@ -1,7 +1,7 @@
 use ux::{u12, u4};
 
 use crate::screen::ScreenDraw;
-use crate::cpu::{CPUState, I, V, PC, SP, DT};
+use crate::cpu::{CPUState, I, V, PC, SP, DT, MemValue};
 
 pub type Instruction = dyn Fn(&mut CPUState, &mut dyn ScreenDraw);
 
@@ -1193,7 +1193,7 @@ fn test_ld_i_vx_inner(x: u16, i_val: u16, i_expected: u16, regs: Vec<u8>, quirks
         post_fn: Some(|state, scope, args| {
             let args = args.unwrap();
             assert_eq!(state.i.0, args.i_expected.0);
-            for (i, x) in (0..args.x.0).enumerate() {
+            for (i, x) in (0..=args.x.0).enumerate() { // inclusive
                 assert_eq!(state.mem[i + u16::from(args.i_val) as usize].0, state.v[i].0);
             }
         }),
@@ -1212,9 +1212,53 @@ pub fn ld_vx_i(x: X) -> Box<Instruction> {
             state.v[i].0 = state.mem[u16::from(state.i.0) as usize + i].0;
         }
         if !state.quirks.load_store {
-            state.i.0 = u12::new(x.0 as u16) + u12::new(1);
+            state.i.0 = state.i.0 + u12::new(x.0 as u16) + u12::new(1);
         }
         state.inc_pc_2();
+    });
+}
+
+#[test]
+fn test_ld_vx_i_quirks_disabled() {
+    test_ld_vx_i_inner(0x6, 0x0B00, 0x0B07, vec![ 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9 ], false);
+    test_ld_vx_i_inner(0xF, 0x0B00, 0x0B10, vec![ 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF ], false);
+}
+
+#[test]
+fn test_ld_vx_i_quirks_enabled() {
+    test_ld_vx_i_inner(0x6, 0x0B00, 0x0B00, vec![ 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9 ], true);
+    test_ld_vx_i_inner(0xF, 0x0B00, 0x0B00, vec![ 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF ], true);
+}
+
+#[cfg(test)]
+fn test_ld_vx_i_inner(x: u16, i_val: u16, i_expected: u16, mem: Vec<u8>, quirks_enabled: bool) {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        op_code: 0xF065 | x << 8,
+        op_args: Option::Some(TestCycleOpArgs {
+            x: X(x as usize),
+            i_val: u12::new(i_val),
+            i_expected: I(u12::new(i_expected)),
+            mem: mem.iter().map(|r| MemValue(r.clone())).collect(),
+            quirks_enabled,
+            ..Default::default()
+        }),
+        pre_fn: Some(|cpu, args| {
+            let args = args.unwrap();
+            cpu.state.i.0 = args.i_val;
+            cpu.state.quirks.load_store = args.quirks_enabled;
+            for (i, x) in args.mem.iter().enumerate() {
+                cpu.state.mem[u16::from(cpu.state.i.0) as usize + i] = x.clone();
+            }
+        }),
+        post_fn: Some(|state, scope, args| {
+            let args = args.unwrap();
+            assert_eq!(state.i.0, args.i_expected.0);
+            for (i, x) in (0..args.x.0).enumerate() { // inclusive
+                assert_eq!(state.mem[i + u16::from(args.i_val) as usize].0, state.v[i].0);
+            }
+        }),
+        ..Default::default()
     });
 }
 
@@ -1222,15 +1266,36 @@ pub fn ld_vx_i(x: X) -> Box<Instruction> {
  * <pre><code>Fx0A - LD Vx, K</code></pre>
  * Wait for a key press, store the value of the key in Vx.
  */
-pub fn ld_vx_k(_x: X) -> Box<Instruction> {
+pub fn ld_vx_k(x: X) -> Box<Instruction> {
     return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn ScreenDraw| {
         state.halted.0 = true;
         // TODO
         // cpu.keyboard.onNextKeyPressed = function (key) {
-        //     state.v[x.0] = key;
-        //     cpu.pc = (cpu.pc + 2) & 0x0FFF;
-        //     cpu.halted = false;
+        state.v[x.0] = V('6' as u8);
+        state.inc_pc_2();
+        state.halted.0 = false;
         // };
+    });
+}
+
+#[test]
+fn test_ld_vx_k() {
+    let x = 0x5;
+    let key = '6';
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        op_code: 0xF00A | x << 8,
+        op_args: Option::Some(TestCycleOpArgs {
+            x: X(x as usize),
+            key,
+            ..Default::default()
+        }),
+        post_fn: Some(|state, scope, args| {
+            let args = args.unwrap();
+            assert_eq!(state.v[args.x.0].0, args.key as u8);
+            assert!(!state.halted.0);
+        }),
+        ..Default::default()
     });
 }
 
@@ -1242,9 +1307,50 @@ pub fn skp_vx(_x: X) -> Box<Instruction> {
     return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn ScreenDraw| {
         // TODO
         // if (cpu.keyboard.isKeyPressed(state.v[x.0])) {
-        //     state.inc_pc_2();
+        state.inc_pc_2();
         // }
         state.inc_pc_2();
+    });
+}
+
+#[test]
+fn test_skp_vx() {
+    test_skp_vx_inner(0x6, 0xA, false, true);
+    test_skp_vx_inner(0x6, 0xB, true, true);
+    test_skp_vx_inner(0x6, 0xB, true, false);
+}
+
+#[cfg(test)]
+fn test_skp_vx_inner(x: u16, x_val: u8, pressed: bool, should_skip: bool) {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        expect_inc: false, // test this explicitly
+        op_code: 0xE09E | x << 8,
+        op_args: Option::Some(TestCycleOpArgs {
+            x: X(x as usize),
+            x_val: V(x_val),
+            ..Default::default()
+        }),
+        pre_fn: Some(move |cpu, args| {
+            let args = args.unwrap();
+            cpu.state.v[args.x.0] = args.x_val;
+            /* TODO
+             if (params.pressed) {
+                cpu.keyboard.keyDown(params.key);
+            }
+             */
+        }),
+        // post_fn: Some(|state, scope, args| {
+        //     // let args = args.unwrap();
+        //     /*
+        //     if (params.shouldSkip) {
+        //         expect(cpu.pc).toEqual((this.oldPc + 4) & 0x0FFF);
+        //     } else {
+        //         expect(cpu.pc).toEqual((this.oldPc + 2) & 0x0FFF);
+        //     }
+        //      */
+        // }),
+        ..Default::default()
     });
 }
 

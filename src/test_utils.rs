@@ -33,6 +33,7 @@ pub(crate) struct TestCycleOpArgs {
     pub(crate) exp_y: V,
     pub(crate) reg_f: V,
     pub(crate) regs: Vec<V>,
+    pub(crate) mem: Vec<MemValue>,
     pub(crate) carry: bool,
     pub(crate) no_borrow: bool,
     pub(crate) quirks_enabled: bool,
@@ -46,6 +47,7 @@ pub(crate) struct TestCycleOpArgs {
     pub(crate) i_val: u12,
     pub(crate) digits: Vec<u8>,
     pub(crate) dt: DT,
+    pub(crate) key: char,
 }
 
 impl Default for TestCycleOpArgs {
@@ -64,6 +66,7 @@ impl Default for TestCycleOpArgs {
             exp_y: V(0),
             reg_f: V(0),
             regs: vec![],
+            mem: vec![],
             pc_offset: PC(u12::new(0)),
             addr: PC(u12::new(0)),
             expected_pc: PC(u12::new(0)),
@@ -75,6 +78,7 @@ impl Default for TestCycleOpArgs {
             i_expected: I(u12::new(0)),
             digits: vec![],
             dt: DT(0),
+            key: 'a',
         }
     }
 }
