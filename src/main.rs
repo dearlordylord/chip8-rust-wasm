@@ -6,6 +6,7 @@ mod cpu_decoder;
 mod cpu_instructions;
 #[cfg(test)]
 mod test_utils;
+mod keyboard;
 
 use std::fs::File;
 use std::io::Read;

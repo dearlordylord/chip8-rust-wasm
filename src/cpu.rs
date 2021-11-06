@@ -12,6 +12,7 @@ use ux::{u12, u4};
 use crate::cpu_decoder::{decode};
 use crate::macros::newtype_copy;
 use crate::screen::{Screen, ScreenDraw};
+use crate::keyboard::{KeyboardState};
 
 const MEM_SIZE: usize = 4096;
 const PROGRAM_START_ADDR: u16 = 0x0200;
@@ -90,6 +91,7 @@ pub struct CPUState {
     pub(crate) quirks: CPUQuirks,
     // not in spec
     pub(crate) rng: ThreadRng,
+    pub(crate) keyboard: KeyboardState,
 }
 
 /**
@@ -167,6 +169,7 @@ impl<'a> CPU<'a> {
                 st: ST(0),
                 quirks: CPUQuirks::new(),
                 rng: rand::thread_rng(),
+                keyboard: KeyboardState::new(),
             },
             delay_ref: None,
             screen,

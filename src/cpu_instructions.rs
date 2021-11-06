@@ -1305,27 +1305,123 @@ fn test_ld_vx_k() {
  */
 pub fn skp_vx(_x: X) -> Box<Instruction> {
     return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn ScreenDraw| {
-        // TODO
-        // if (cpu.keyboard.isKeyPressed(state.v[x.0])) {
-        state.inc_pc_2();
-        // }
+        if state.keyboard.is_key_pressed(state.v[_x.0].0 as usize) {
+            state.inc_pc_2();
+        }
         state.inc_pc_2();
     });
 }
 
 #[test]
 fn test_skp_vx() {
-    test_skp_vx_inner(0x6, 0xA, false, true);
-    test_skp_vx_inner(0x6, 0xB, true, true);
-    test_skp_vx_inner(0x6, 0xB, true, false);
+    test_skp_vx_inner(0x6, 0xA, true, 0xA as char, true);
+    test_skp_vx_inner(0x6, 0xB, true, 0xA as char, false);
+    test_skp_vx_inner(0x6, 0xC, false, 0xA as char, false);
 }
 
 #[cfg(test)]
-fn test_skp_vx_inner(x: u16, x_val: u8, pressed: bool, should_skip: bool) {
+fn test_skp_vx_inner(x: u16, x_val: u8, pressed: bool, key: char, should_skip: bool) {
     use super::test_utils::*;
     test_cycle(TestCycleParams {
         expect_inc: false, // test this explicitly
         op_code: 0xE09E | x << 8,
+        op_args: Option::Some(TestCycleOpArgs {
+            x: X(x as usize),
+            x_val: V(x_val),
+            should_skip,
+            pressed,
+            key,
+            ..Default::default()
+        }),
+        pre_fn: Some(move |cpu, args| {
+            let args = args.unwrap();
+            cpu.state.v[args.x.0] = args.x_val;
+            if (args.pressed) {
+                cpu.state.keyboard.key_down(args.key as usize)
+            }
+        }),
+        post_fn: Some(|state, scope, args| {
+            let args = args.unwrap();
+            if (args.should_skip) {
+                assert_eq!(state.pc.0, scope.old_cpu_state.pc.0 + u12::new(4 as u16));
+            } else {
+                assert_eq!(state.pc.0, scope.old_cpu_state.pc.0 + u12::new(2 as u16));
+            }
+        }),
+        ..Default::default()
+    });
+}
+
+/**
+ * <pre><code>ExA1 - SKNP Vx</code></pre>
+ * Skip next instruction if key with the value of Vx is not pressed.
+ */
+pub fn sknp_vx(_x: X) -> Box<Instruction> {
+    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn ScreenDraw| {
+        if !state.keyboard.is_key_pressed(state.v[_x.0].0 as usize) {
+            state.inc_pc_2();
+        }
+        state.inc_pc_2();
+    });
+}
+
+#[test]
+fn test_sknp_vx() {
+    test_sknp_vx_inner(0x6, 0xA, false, 0xA as char, true);
+    test_sknp_vx_inner(0x6, 0xB, true, 0xA as char, true);
+    test_sknp_vx_inner(0x6, 0xB, true, 0xB as char, false);
+}
+
+#[cfg(test)]
+fn test_sknp_vx_inner(x: u16, x_val: u8, pressed: bool, key: char, should_skip: bool) {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        expect_inc: false, // test this explicitly
+        op_code: 0xE0A1 | x << 8,
+        op_args: Option::Some(TestCycleOpArgs {
+            x: X(x as usize),
+            x_val: V(x_val),
+            pressed,
+            should_skip,
+            key,
+            ..Default::default()
+        }),
+        pre_fn: Some(move |cpu, args| {
+            let args = args.unwrap();
+            cpu.state.v[args.x.0] = args.x_val;
+            if args.pressed {
+                cpu.state.keyboard.key_down(args.key as usize)
+            }
+        }),
+        post_fn: Some(|state, scope, args| {
+            let args = args.unwrap();
+            if args.should_skip {
+                assert_eq!(state.pc.0, scope.old_cpu_state.pc.0 + u12::new(4 as u16));
+            } else {
+                assert_eq!(state.pc.0, scope.old_cpu_state.pc.0 + u12::new(2 as u16));
+            }
+        }),
+        ..Default::default()
+    });
+}
+
+/**
+ * <pre><code>Fx29 - LD F, Vx</code></pre>
+ * Set I = location of sprite for digit Vx.
+ */
+pub fn ld_f_vx(x: X) -> Box<Instruction> {
+    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn ScreenDraw| {
+        state.i = I(u12::new(state.v[x.0].0 as u16 * 5));
+        state.inc_pc_2();
+    });
+}
+
+#[cfg(test)]
+fn test_ld_f_vx_inner(x: u16, x_val: u8, pressed: bool, should_skip: bool) {
+    use super::test_utils::*;
+    test_cycle(TestCycleParams {
+        expect_inc: false, // test this explicitly
+        op_code: 0xF029 | x << 8,
         op_args: Option::Some(TestCycleOpArgs {
             x: X(x as usize),
             x_val: V(x_val),
@@ -1334,11 +1430,6 @@ fn test_skp_vx_inner(x: u16, x_val: u8, pressed: bool, should_skip: bool) {
         pre_fn: Some(move |cpu, args| {
             let args = args.unwrap();
             cpu.state.v[args.x.0] = args.x_val;
-            /* TODO
-             if (params.pressed) {
-                cpu.keyboard.keyDown(params.key);
-            }
-             */
         }),
         // post_fn: Some(|state, scope, args| {
         //     // let args = args.unwrap();
@@ -1355,29 +1446,21 @@ fn test_skp_vx_inner(x: u16, x_val: u8, pressed: bool, should_skip: bool) {
 }
 
 /**
- * <pre><code>ExA1 - SKNP Vx</code></pre>
- * Skip next instruction if key with the value of Vx is not pressed.
- */
-pub fn sknp_vx(_x: X) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn ScreenDraw| {
-        // TODO
-        // if (!cpu.keyboard.isKeyPressed(state.v[x.0])) {
-        //     cpu.pc = (cpu.pc + 2) & 0x0FFF;
-        // }
-        state.inc_pc_2();
-    });
-}
-
-/**
- * <pre><code>Fx29 - LD F, Vx</code></pre>
- * Set I = location of sprite for digit Vx.
- */
-pub fn ld_f_vx(x: X) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn ScreenDraw| {
-        state.i = I(u12::new(state.v[x.0].0 as u16 * 5));
-        state.inc_pc_2();
-    });
-}
+test_LD_F_Vx: function (cpu, params) {
+            testCycle(cpu, {
+                opCode: 0xF029 | (params.x << 8),
+                op: 'LD_F_Vx',
+                args: [ params.x ],
+                preFn: function () {
+                    cpu.V[params.x] = params.xVal;
+                },
+                postFn: function () {
+                    expect(cpu.i).toEqual(params.i);
+                    expect(cpu.pc).toEqual((this.oldPc + 2) & 0x0FFF);
+                }
+            });
+        },
+*/
 
 /**
  * <pre><code>Dxyn - DRW Vx, Vy, n</code></pre>

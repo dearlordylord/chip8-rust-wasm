@@ -48,6 +48,8 @@ pub(crate) struct TestCycleOpArgs {
     pub(crate) digits: Vec<u8>,
     pub(crate) dt: DT,
     pub(crate) key: char,
+    pub(crate) should_skip: bool,
+    pub(crate) pressed: bool,
 }
 
 impl Default for TestCycleOpArgs {
@@ -79,6 +81,8 @@ impl Default for TestCycleOpArgs {
             digits: vec![],
             dt: DT(0),
             key: 'a',
+            should_skip: false,
+            pressed: false,
         }
     }
 }
