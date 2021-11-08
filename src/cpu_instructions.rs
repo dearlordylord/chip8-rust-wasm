@@ -509,7 +509,8 @@ fn test_shx_vx_vy_inner(x: u16, y: u16, x_val: u8, y_val: u8, exp_x: u8, exp_y: 
  */
 pub fn add_vx_kk(x: X, kk: KK) -> Box<Instruction> {
     return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn ScreenDraw| {
-        state.v[x.0].0 = state.v[x.0].0 + kk.0;
+        // game could overflow it
+        state.v[x.0].0 = state.v[x.0].0.wrapping_add(kk.0);
         state.inc_pc_2();
     });
 }
@@ -1271,9 +1272,9 @@ pub fn ld_vx_k(x: X) -> Box<Instruction> {
         state.halted.0 = true;
         // TODO
         // cpu.keyboard.onNextKeyPressed = function (key) {
-        state.v[x.0] = V('6' as u8);
-        state.inc_pc_2();
-        state.halted.0 = false;
+        // state.v[x.0] = V('6' as u8);
+        // state.inc_pc_2();
+        // state.halted.0 = false;
         // };
     });
 }
