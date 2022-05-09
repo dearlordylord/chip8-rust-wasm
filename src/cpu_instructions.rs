@@ -1,3 +1,4 @@
+use std::ops::Rem;
 use ux::{u12, u4};
 
 use crate::screen::ScreenDraw;
@@ -8,8 +9,24 @@ pub type Instruction = dyn Fn(&mut CPUState, &mut dyn ScreenDraw);
 #[derive(Clone, Debug)]
 pub struct X(pub usize);
 
+impl Rem for X {
+    type Output = X;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        X(self.0 % rhs.0)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Y(pub usize);
+
+impl Rem for Y {
+    type Output = Y;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        Y(self.0 % rhs.0)
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct KK(pub u8);
@@ -1474,8 +1491,8 @@ pub fn drw_vx_vy_n(x: X, y: Y, n: N) -> Box<Instruction> {
             let membyte = state.mem[u16::from(state.i.0 + u12::new(hline)) as usize];
             for vline in 0..8 {
                 if (membyte.0 & (0x80 >> vline)) != 0 {
-                    let nx = X(u16::from(state.v[x.0].0) as usize + vline);
-                    let ny = Y(u16::from(state.v[y.0].0) as usize + hline as usize);
+                    let nx = X(u16::from(state.v[x.0].0) as usize + vline) % X(screen_draw.get_width());
+                    let ny = Y(u16::from(state.v[y.0].0) as usize + hline as usize) % Y(screen_draw.get_height());
                     let coll = screen_draw.toggle_pixel(nx, ny);
                     if coll.0 {
                         state.v[0xF] = V(1);

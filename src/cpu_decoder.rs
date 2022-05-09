@@ -24,7 +24,6 @@ pub fn decode(opcode: u16) -> DecodeResult {
     let kk = KK((opcode & 0x00FF).to_be_bytes()[1]);
     let nnn = NNN(u12::new(opcode & 0x0FFF));
     let n = N(opcode & 0x000F);
-    println!("{}", opcode & 0xF000);
     match opcode & 0xF000 {
         0x0000 => match opcode {
             0x00E0 => DecodeResult::Ok(cls()),
