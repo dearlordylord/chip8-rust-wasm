@@ -18,6 +18,7 @@ use crate::console_screen::ConsoleScreen;
 async fn main() -> std::io::Result<()> {
     let program = read_rom();
     let mut cpu = CPU::new(Box::new(ConsoleScreen::new()));
+    println!("{:?}", program);
     cpu.load_program(program);
     cpu.run().await;
     Ok(())

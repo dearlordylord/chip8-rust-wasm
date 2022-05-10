@@ -5,7 +5,7 @@ use futures::future::LocalBoxFuture;
 use tokio::time::{Delay, delay_for};
 
 use crate::cpu_instructions::{X, Y};
-use crate::screen::{IsCollision, make_zero_screen_state, Screen, SCREEN_HEIGHT, SCREEN_WIDTH, ScreenDraw, ScreenState};
+use crate::screen::{IsCollision, make_zero_screen_state, Screen, SCREEN_HEIGHT, SCREEN_WIDTH, ScreenDraw, ScreenState, toggle_pixel};
 
 pub struct ConsoleScreen {
     drawn: bool,
@@ -13,8 +13,8 @@ pub struct ConsoleScreen {
 }
 
 impl ScreenDraw for ConsoleScreen {
-    fn borrow_state(&mut self) -> &mut ScreenState {
-        &mut self.state
+    fn toggle_pixel(&mut self, x: X, y: Y) -> IsCollision {
+        toggle_pixel(&mut self.state, x, y)
     }
 
     fn repaint(&mut self) {

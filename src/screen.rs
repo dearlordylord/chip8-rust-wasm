@@ -9,15 +9,15 @@ use crate::cpu_instructions::{X, Y};
 
 pub struct IsCollision(pub bool);
 
+pub fn toggle_pixel(state: &mut ScreenState, x: X, y: Y) -> IsCollision {
+    let is_collision = state[y.0][x.0];
+    state[y.0][x.0] = !is_collision;
+    IsCollision(is_collision)
+}
+
 #[automock]
 pub trait ScreenDraw {
-    fn borrow_state(&mut self) -> &mut ScreenState;
-    fn toggle_pixel(&mut self, x: X, y: Y) -> IsCollision {
-        let state = self.borrow_state();
-        let is_collision = state[y.0][x.0];
-        state[y.0][x.0] = !is_collision;
-        IsCollision(is_collision)
-    }
+    fn toggle_pixel(&mut self, x: X, y: Y) -> IsCollision;
     fn repaint(&mut self);
     fn clear(&mut self);
     fn get_width(&self) -> usize {

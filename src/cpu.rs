@@ -2,12 +2,17 @@ use std::{println};
 use std::borrow::BorrowMut;
 use std::convert::{TryFrom};
 use std::ops::{Add, Sub};
+use std::thread::sleep;
+use std::time::Duration;
 use anyhow::Result;
+use fluvio_wasm_timer::{Delay};
+
 
 use rand::prelude::ThreadRng;
-use rand::Rng;
-use tokio::time::{Delay, delay_for, Duration};
+use rand::{Rng, RngCore, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 use ux::{u12, u4};
+use wasm_bindgen_futures::spawn_local;
 
 use crate::cpu_decoder::{decode};
 use crate::macros::newtype_copy;
@@ -90,7 +95,7 @@ pub struct CPUState {
     pub(crate) st: ST,
     pub(crate) quirks: CPUQuirks,
     // not in spec
-    pub(crate) rng: ThreadRng,
+    pub(crate) rng_seed: u64,
     pub(crate) keyboard: KeyboardState,
 }
 
@@ -128,7 +133,9 @@ impl CPUState {
         }
     }
     pub(crate) fn run_rng(&mut self) -> u8 { // 0..255
-        self.rng.gen()
+        let mut rng = ChaCha8Rng::seed_from_u64(self.rng_seed);
+        self.rng_seed = rng.next_u64();
+        rng.gen()
     }
     // no more incs planned never; 2 fns is fine
     pub(crate) fn inc_pc_2(&mut self) {
@@ -142,7 +149,7 @@ impl CPUState {
 
 pub struct CPU<'a> {
     pub(crate) state: CPUState,
-    delay_ref: Option<Delay>,
+    stopped: bool,
     screen: Box<dyn Screen + 'a>,
 }
 
@@ -169,11 +176,11 @@ impl<'a> CPU<'a> {
                 dt: DT(0),
                 st: ST(0),
                 quirks: CPUQuirks::new(),
-                rng: rand::thread_rng(),
+                rng_seed: rand::thread_rng().next_u64(),
                 keyboard: KeyboardState::new(),
             },
-            delay_ref: None,
             screen,
+            stopped: false,
         }
     }
     pub fn load_program(&mut self, data: Vec<u8>) {
@@ -185,8 +192,10 @@ impl<'a> CPU<'a> {
 
     pub async fn run(&mut self) {
         loop {
-            self.delay_ref = Some(delay_for(Duration::new(1 / SPEED, 0)));
-            self.delay_ref.as_mut().unwrap().borrow_mut().await;
+            Delay::new(Duration::new(1 / SPEED, 0)).await;
+            if self.stopped {
+                break;
+            }
             if !self.state.halted.0 {
                 self.screen.request_animation_frame().await;
                 match CPU::cycle(&mut self.state, &mut *self.screen) {
@@ -196,13 +205,14 @@ impl<'a> CPU<'a> {
                         self.stop();
                     }
                 }
+            } else {
+                break;
             }
         }
-
     }
 
     pub fn stop(&mut self) {
-        self.delay_ref = None;
+        self.stopped = true;
     }
 
     fn cycle(state: &mut CPUState, screen_draw: &mut dyn Screen) -> Result<()> {

@@ -4,14 +4,13 @@ use callback_future::CallbackFuture;
 
 use futures::{future::BoxFuture, FutureExt};
 use futures::future::LocalBoxFuture;
-use tokio::stream::StreamExt;
 use tokio::time::delay_for;
 use wasm_bindgen::JsCast;
 use web_sys::window;
 use web_sys::CanvasRenderingContext2d;
 
 use crate::cpu_instructions::{X, Y};
-use crate::screen::{IsCollision, Screen, SCREEN_HEIGHT, SCREEN_WIDTH, ScreenDraw, ScreenState, make_zero_screen_state};
+use crate::screen::{IsCollision, Screen, SCREEN_HEIGHT, SCREEN_WIDTH, ScreenDraw, ScreenState, make_zero_screen_state, toggle_pixel};
 use wasm_bindgen::prelude::*;
 
 pub struct WasmCanvasScreen {
@@ -19,12 +18,10 @@ pub struct WasmCanvasScreen {
     canvas: web_sys::HtmlCanvasElement,
 }
 
+
 impl ScreenDraw for WasmCanvasScreen {
-    fn borrow_state(&mut self) -> &mut ScreenState {
-        &mut self.state
-    }
     fn toggle_pixel(&mut self, x: X, y: Y) -> IsCollision {
-        let is_collision = ScreenDraw::toggle_pixel(self, x.clone(), y.clone());
+        let is_collision = toggle_pixel(&mut self.state, x.clone(), y.clone());
         self.draw_pixel(x, y, !is_collision.0);
         is_collision
     }
