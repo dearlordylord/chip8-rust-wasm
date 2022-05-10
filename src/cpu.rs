@@ -11,7 +11,7 @@ use ux::{u12, u4};
 
 use crate::cpu_decoder::{decode};
 use crate::macros::newtype_copy;
-use crate::screen::{Screen, ScreenDraw};
+use crate::screen::{Screen};
 use crate::keyboard::{KeyboardState};
 
 const MEM_SIZE: usize = 4096;
@@ -139,6 +139,7 @@ impl CPUState {
     // }
 }
 
+
 pub struct CPU<'a> {
     pub(crate) state: CPUState,
     delay_ref: Option<Delay>,
@@ -187,8 +188,8 @@ impl<'a> CPU<'a> {
             self.delay_ref = Some(delay_for(Duration::new(1 / SPEED, 0)));
             self.delay_ref.as_mut().unwrap().borrow_mut().await;
             if !self.state.halted.0 {
-                let screen_draw = self.screen.request_animation_frame().await;
-                match CPU::cycle(&mut self.state, screen_draw) {
+                self.screen.request_animation_frame().await;
+                match CPU::cycle(&mut self.state, &mut *self.screen) {
                     Ok(()) => (),
                     Err(e) => {
                         println!("Error during cycle, {}. STOPPING", e);
@@ -204,7 +205,7 @@ impl<'a> CPU<'a> {
         self.delay_ref = None;
     }
 
-    fn cycle(state: &mut CPUState, screen_draw: &mut dyn ScreenDraw) -> Result<()> {
+    fn cycle(state: &mut CPUState, screen_draw: &mut dyn Screen) -> Result<()> {
         if state.halted.0 {
             return Ok(());
         }
@@ -220,7 +221,7 @@ impl<'a> CPU<'a> {
         // }
     }
 
-    pub(crate) fn step(state: &mut CPUState, screen_draw: &mut dyn ScreenDraw) -> StepResult {
+    pub(crate) fn step(state: &mut CPUState, screen_draw: &mut dyn Screen) -> StepResult {
         let opcode = state.fetch();
         let op = decode(opcode)?;
         // TODO result type, error type
@@ -232,7 +233,7 @@ impl<'a> CPU<'a> {
         StepResult::Ok(())
     }
 
-    fn execute(state: &mut CPUState, screen_draw: &mut dyn ScreenDraw, op: impl Fn(&mut CPUState, &mut dyn ScreenDraw) -> ()) {
+    fn execute(state: &mut CPUState, screen_draw: &mut dyn Screen, op: impl Fn(&mut CPUState, &mut dyn Screen) -> ()) {
         op(state, screen_draw);
     }
 

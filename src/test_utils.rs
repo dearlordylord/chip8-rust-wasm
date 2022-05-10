@@ -10,8 +10,8 @@ pub struct TestScreen<'a> {
 
 impl<'a> Screen for TestScreen<'a> {
     fn request_animation_frame<'b>(&'b mut self) -> BoxFuture<'b, &'b mut dyn ScreenDraw> {
-        // as &mut dyn ScreenDraw
-        Box::pin(ready(self.screen_draw as &mut dyn ScreenDraw))
+        // as &mut dyn Screen
+        Box::pin(ready(self.screen_draw as &mut dyn Screen))
     }
 }
 

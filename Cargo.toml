@@ -13,3 +13,6 @@ futures = "0.3"
 rand = "0.8.4"
 anyhow = "1.0"
 mockall = "0.10.1"
+web-sys = { vesion = "0.3.57", features = ["CanvasRenderingContext2d", "Document", "Element", "HtmlCanvasElement", "Window"]}
+callback-future = "0.1"
+wasm-bindgen = "0.2.80"

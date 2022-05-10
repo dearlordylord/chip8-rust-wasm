@@ -7,6 +7,7 @@ mod cpu_instructions;
 #[cfg(test)]
 mod test_utils;
 mod keyboard;
+mod wasm_canvas_screen;
 
 use std::fs::File;
 use std::io::Read;

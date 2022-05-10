@@ -1,31 +1,44 @@
 use std::time::Duration;
 
-use futures::{future::BoxFuture, FutureExt};
-use tokio::time::delay_for;
+use futures::{Future, future::BoxFuture, FutureExt};
+use futures::future::LocalBoxFuture;
+use tokio::time::{Delay, delay_for};
 
 use crate::cpu_instructions::{X, Y};
-use crate::screen::{IsCollision, Screen, SCREEN_HEIGHT, SCREEN_WIDTH, ScreenDraw};
+use crate::screen::{IsCollision, make_zero_screen_state, Screen, SCREEN_HEIGHT, SCREEN_WIDTH, ScreenDraw, ScreenState};
 
 pub struct ConsoleScreen {
-    draw: ConsoleScreenDraw,
-}
-
-type ScreenState = [[bool; SCREEN_WIDTH]; SCREEN_HEIGHT];
-
-pub struct ConsoleScreenDraw {
     drawn: bool,
     state: ScreenState,
 }
 
-pub fn make_zero_state() -> ScreenState {
-    [[false; SCREEN_WIDTH]; SCREEN_HEIGHT]
+impl ScreenDraw for ConsoleScreen {
+    fn borrow_state(&mut self) -> &mut ScreenState {
+        &mut self.state
+    }
+
+    fn repaint(&mut self) {
+        self.draw_console();
+    }
+    fn clear(&mut self) {
+        self.state = make_zero_screen_state();
+        self.flush_console();
+    }
+
+    fn get_width(&self) -> usize {
+        SCREEN_WIDTH
+    }
+
+    fn get_height(&self) -> usize {
+        SCREEN_HEIGHT
+    }
 }
 
-impl ConsoleScreenDraw {
-    fn new() -> Self {
-        ConsoleScreenDraw {
+impl ConsoleScreen {
+    pub fn new() -> Self {
+        Self {
             drawn: false,
-            state: make_zero_state(),
+            state: make_zero_screen_state(),
         }
     }
     fn flush_console(&mut self) {
@@ -51,45 +64,8 @@ impl ConsoleScreenDraw {
     }
 }
 
-impl ScreenDraw for ConsoleScreenDraw {
-
-    fn toggle_pixel(&mut self, x: X, y: Y) -> IsCollision {
-        let is_collision = self.state[y.0][x.0];
-        self.state[y.0][x.0] = !is_collision;
-        IsCollision(is_collision)
-    }
-    fn repaint(&mut self) {
-        self.draw_console();
-    }
-    fn clear(&mut self) {
-        self.state = make_zero_state();
-        self.flush_console();
-    }
-
-    fn get_width(&self) -> usize {
-        SCREEN_WIDTH
-    }
-
-    fn get_height(&self) -> usize {
-        SCREEN_HEIGHT
-    }
-}
-
-impl ConsoleScreen {
-    pub fn new() -> Self {
-        Self {
-            draw: ConsoleScreenDraw::new(),
-        }
-    }
-}
-
 impl Screen for ConsoleScreen {
-    fn request_animation_frame(&mut self) -> BoxFuture<&mut dyn ScreenDraw> {
-        let draw = &mut self.draw as &mut dyn ScreenDraw;
-        let f = async move {
-            delay_for(Duration::new(0, 10000)).await;
-            draw
-        };
-        return f.boxed();
+    fn request_animation_frame(&self) -> LocalBoxFuture<()> {
+        delay_for(Duration::new(0, 10000)).boxed_local()
     }
 }
