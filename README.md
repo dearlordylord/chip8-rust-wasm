@@ -34,3 +34,5 @@ const init = async () => {
     
 }
 ```
+
+Demo deployed on http://chip8-rust-wasm-frontend.apps.loskutoff.com
