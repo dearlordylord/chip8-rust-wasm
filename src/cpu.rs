@@ -146,11 +146,13 @@ impl CPUState {
     // }
 }
 
+use wasm_bindgen::prelude::*;
 
-pub struct CPU<'a> {
+#[wasm_bindgen]
+pub struct CPU {
     pub(crate) state: CPUState,
     stopped: bool,
-    screen: Box<dyn Screen + 'a>,
+    screen: Box<dyn Screen>,
 }
 
 fn load_font_set(mem: &mut Mem) {
@@ -159,8 +161,9 @@ fn load_font_set(mem: &mut Mem) {
     }
 }
 
-impl<'a> CPU<'a> {
-    pub fn new(screen: Box<dyn Screen + 'a>) -> Self {
+#[wasm_bindgen]
+impl CPU {
+    pub(crate) fn new(screen: Box<dyn Screen>) -> Self {
         let mut mem = [MemValue(0); MEM_SIZE];
         load_font_set(&mut mem);
         Self {
@@ -183,32 +186,33 @@ impl<'a> CPU<'a> {
             stopped: false,
         }
     }
-    pub fn load_program(&mut self, data: Vec<u8>) {
+    pub(crate) fn load_program(&mut self, data: Vec<u8>) {
         assert!(u12::max_value().sub(u12::new(PROGRAM_START_ADDR)) >= u12::new(u16::try_from(data.len()).expect("Data len takes more than u16")));
         for (i, x) in data.iter().enumerate() {
             self.state.mem[usize::from(PROGRAM_START_ADDR) + i].0 = x.clone();
         }
     }
 
-    pub async fn run(&mut self) {
-        loop {
-            Delay::new(Duration::new(1 / SPEED, 0)).await;
-            if self.stopped {
-                break;
-            }
-            if !self.state.halted.0 {
-                self.screen.request_animation_frame().await;
-                match CPU::cycle(&mut self.state, &mut *self.screen) {
-                    Ok(()) => (),
-                    Err(e) => {
-                        println!("Error during cycle, {}. STOPPING", e);
-                        self.stop();
-                    }
-                }
-            } else {
-                break;
+    // https://github.com/rustwasm/wasm-bindgen/issues/1858 , hence "self"
+    pub async fn run(mut self) -> Option<CPU> {
+        Delay::new(Duration::new(1 / SPEED, 0)).await;
+        if self.is_done() {
+            return None;
+        }
+        self.screen.request_animation_frame().await;
+        match CPU::cycle(&mut self.state, &mut *self.screen) {
+            Ok(()) => Some(self),
+            Err(e) => {
+                println!("Error during cycle, {}. STOPPING", e);
+                self.stop();
+                return None;
             }
         }
+    }
+
+    pub fn is_done(&self) -> bool {
+        // by a program or by a user
+        self.state.halted.0 || self.stopped
     }
 
     pub fn stop(&mut self) {
@@ -231,7 +235,7 @@ impl<'a> CPU<'a> {
         // }
     }
 
-    pub(crate) fn step(state: &mut CPUState, screen_draw: &mut dyn Screen) -> StepResult {
+    fn step(state: &mut CPUState, screen_draw: &mut dyn Screen) -> StepResult {
         let opcode = state.fetch();
         let op = decode(opcode)?;
         // TODO result type, error type

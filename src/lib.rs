@@ -12,9 +12,11 @@ use wasm_bindgen::prelude::*;
 
 use std::fs::File;
 use std::io::Read;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use futures::TryFutureExt;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
+use wasm_mutex::Mutex;
 use cpu::CPU;
 use crate::console_screen::ConsoleScreen;
 use crate::wasm_canvas_screen::WasmCanvasScreen;
@@ -31,8 +33,39 @@ pub struct ProgramHandle {
  */
 
 
+// #[wasm_bindgen]
+// pub fn init_program(program: &[u8], canvas: JsValue) -> Result<JsValue, JsValue> {
+//     use web_sys::console;
+//
+//     match canvas.dyn_into::<web_sys::HtmlCanvasElement>() {
+//         Ok(canvas) => {
+//             let mut cpu = CPU::new(Box::new(WasmCanvasScreen::new(canvas)));
+//             console::log_1(&program.to_vec().iter().fold(String::new(), |a, b| a + b.to_string().trim() + ", ").to_string().into());
+//             cpu.load_program(program.to_vec());
+//             let mut cpu_locked = Arc::new(Mutex::new(cpu));
+//             let mut cpu_locked_for_deinit = cpu_locked.clone();
+//             spawn_local(async move {
+//                 loop {
+//                     let arc_clone = cpu_locked.clone();
+//                     let mut cpu = arc_clone.lock().await;
+//                     if cpu.is_done() {
+//                         break;
+//                     }
+//                     cpu.run().await;
+//                 }
+//             });
+//             console::log_1(&"after run".into());
+//             Ok(Closure::once_into_js( move || {
+//                 cpu_locked_for_deinit.clone().lock().into().stop();
+//             }))
+//         }
+//         Err(_) => Err(JsValue::from_str("canvas argument not a HtmlCanvas")),
+//     }
+//
+// }
+
 #[wasm_bindgen]
-pub fn init_program(program: &[u8], canvas: JsValue) -> Result<JsValue, JsValue> {
+pub fn init_program(program: &[u8], canvas: JsValue) -> Result<CPU, JsValue> {
     use web_sys::console;
 
     match canvas.dyn_into::<web_sys::HtmlCanvasElement>() {
@@ -40,15 +73,7 @@ pub fn init_program(program: &[u8], canvas: JsValue) -> Result<JsValue, JsValue>
             let mut cpu = CPU::new(Box::new(WasmCanvasScreen::new(canvas)));
             console::log_1(&program.to_vec().iter().fold(String::new(), |a, b| a + b.to_string().trim() + ", ").to_string().into());
             cpu.load_program(program.to_vec());
-            let mut cpu_locked = Arc::new(Mutex::new(cpu));
-            let mut cpu_locked_for_deinit = cpu_locked.clone();
-            spawn_local(async move {
-                cpu_locked.clone().lock().unwrap().run().await;
-            });
-            console::log_1(&"after run".into());
-            Ok(Closure::once_into_js(move || {
-                cpu_locked_for_deinit.clone().lock().unwrap().stop();
-            }))
+            return Ok(cpu);
         }
         Err(_) => Err(JsValue::from_str("canvas argument not a HtmlCanvas")),
     }

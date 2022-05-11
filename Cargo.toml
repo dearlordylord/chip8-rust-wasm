@@ -26,3 +26,4 @@ wasm-bindgen-futures = "0.4.30"
 state = { version = "0.5.3", features = ["tls"] }
 rand_chacha = "0.3.1"
 fluvio-wasm-timer = "0.2.5"
+wasm_mutex = "0.1.1"
