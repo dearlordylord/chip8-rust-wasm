@@ -41,12 +41,12 @@ impl KeyboardState {
         Self {key_state: [false; 16]}
     }
     pub fn is_key_pressed(&self, k: &u8) -> bool {
-        self.key_state[k.clone() as usize]
+        self.key_state[*k as usize]
     }
     pub fn key_down(&mut self, k: &u8) {
-        self.key_state[k.clone() as usize] = true;
+        self.key_state[*k as usize] = true;
     }
     pub fn key_up(&mut self, k: &u8) {
-        self.key_state[k.clone() as usize] = false;
+        self.key_state[*k as usize] = false;
     }
 }

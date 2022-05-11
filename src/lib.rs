@@ -12,15 +12,15 @@ use wasm_bindgen::prelude::*;
 #[macro_use]
 extern crate lazy_static;
 
-use std::fs::File;
-use std::io::Read;
-use std::sync::Arc;
-use futures::TryFutureExt;
+
+
+
+
 use wasm_bindgen::JsCast;
-use wasm_bindgen_futures::spawn_local;
-use wasm_mutex::Mutex;
+
+
 use cpu::CPU;
-use crate::console_screen::ConsoleScreen;
+
 use crate::wasm_canvas_screen::WasmCanvasScreen;
 
 
@@ -72,7 +72,7 @@ pub fn init_program(program: &[u8], canvas: JsValue) -> Result<CPU, JsValue> {
         Ok(canvas) => {
             let mut cpu = CPU::new(Box::new(WasmCanvasScreen::new(canvas)));
             cpu.load_program(program.to_vec());
-            return Ok(cpu);
+            Ok(cpu)
         }
         Err(_) => Err(JsValue::from_str("canvas argument not a HtmlCanvas")),
     }

@@ -2,17 +2,17 @@ use std::{println};
 use std::borrow::BorrowMut;
 use std::convert::{TryFrom};
 use std::ops::{Add, Sub};
-use std::thread::sleep;
+
 use std::time::Duration;
 use anyhow::Result;
 use fluvio_wasm_timer::{Delay};
 use crate::keyboard::PC_KEY_MAP;
 
-use rand::prelude::ThreadRng;
+
 use rand::{Rng, RngCore, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use ux::{u12, u4};
-use wasm_bindgen_futures::spawn_local;
+
 
 use crate::cpu_decoder::{decode};
 use crate::macros::newtype_copy;
@@ -122,18 +122,18 @@ impl CPUQuirks {
 
 impl CPUState {
     fn fetch(&self) -> u16 {
-        return u16::from_be_bytes([self.mem[self.pci()].0, self.mem[self.pci() + 1].0]);
+        u16::from_be_bytes([self.mem[self.pci()].0, self.mem[self.pci() + 1].0])
     }
     pub(crate) fn pci(&self) -> usize {
         let r: u16 = self.pc.0.into();
-        return r.into();
+        r.into()
     }
     pub(crate) fn update_timers(&mut self) {
         if self.dt.0 > 0 {
-            self.dt.0 = self.dt.0 - 1;
+            self.dt.0 -= 1;
         }
         if self.st.0 > 0 {
-            self.st.0 = self.st.0 - 1;
+            self.st.0 -= 1;
         }
     }
     pub(crate) fn run_rng(&mut self) -> u8 { // 0..255
@@ -196,7 +196,7 @@ impl CPU {
     pub(crate) fn load_program(&mut self, data: Vec<u8>) {
         assert!(u12::max_value().sub(u12::new(PROGRAM_START_ADDR)) >= u12::new(u16::try_from(data.len()).expect("Data len takes more than u16")));
         for (i, x) in data.iter().enumerate() {
-            self.state.mem[usize::from(PROGRAM_START_ADDR) + i].0 = x.clone();
+            self.state.mem[usize::from(PROGRAM_START_ADDR) + i].0 = *x;
         }
     }
 
@@ -212,7 +212,7 @@ impl CPU {
             Err(e) => {
                 println!("Error during cycle, {}. STOPPING", e);
                 self.stop();
-                return None;
+                None
             }
         }
     }
@@ -257,12 +257,12 @@ impl CPU {
         StepResult::Ok(())
     }
 
-    fn execute(state: &mut CPUState, screen_draw: &mut dyn Screen, op: impl Fn(&mut CPUState, &mut dyn Screen) -> ()) {
+    fn execute(state: &mut CPUState, screen_draw: &mut dyn Screen, op: impl Fn(&mut CPUState, &mut dyn Screen)) {
         op(state, screen_draw);
     }
 
     pub fn key_down(&mut self, kbk: usize) {
-        use web_sys::console;
+        
         let k = PC_KEY_MAP.get(&kbk);
         if k.is_none() {
             return;
@@ -272,7 +272,7 @@ impl CPU {
         // todo or keyup?
         if self.state.waiting_kb.0 {
             let x = self.state.waiting_kb_x.as_ref().expect("waiting for kb but no X");
-            self.state.v[x.0] = V('6' as u8);
+            self.state.v[x.0] = V(b'6');
             self.state.inc_pc_2();
             self.state.halted.0 = false;
             self.state.waiting_kb.0 = false;

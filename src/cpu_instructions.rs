@@ -2,8 +2,8 @@ use std::ops::Rem;
 use ux::{u12, u4};
 
 use crate::screen::{Screen, ScreenDraw};
-use crate::cpu::{CPUState, I, V, PC, SP, DT, MemValue};
-use crate::keyboard::PC_KEY_MAP;
+use crate::cpu::{CPUState, I, V};
+
 
 pub type Instruction = dyn Fn(&mut CPUState, &mut dyn Screen);
 
@@ -45,9 +45,9 @@ pub struct N(pub u16);
 * It is ignored by modern interpreters.
 */
 pub fn sys() -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -64,11 +64,11 @@ fn test_sys() {
  * Clears the display.
  */
 pub fn cls() -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, screen_draw: &mut dyn Screen| {
         screen_draw.clear();
         state.repaint.0 = true;
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -90,10 +90,10 @@ fn test_cls() {
  * Set Vx = Vy
  */
 pub fn ld_vx_vy(x: X, y: Y) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         state.v[x.0].0 = state.v[y.0].0;
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -128,10 +128,10 @@ fn test_ld_vx_vy() {
  * Set Vx = kk
  */
 pub fn ld_vx_kk(x: X, kk: KK) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         state.v[x.0].0 = kk.0;
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -157,10 +157,10 @@ fn test_ld_vx_kk() {
  * Set Vx = Vx OR Vy.
  */
 pub fn or_vx_vy(x: X, y: Y) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
-        state.v[x.0].0 = state.v[x.0].0 | state.v[y.0].0;
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+        state.v[x.0].0 |= state.v[y.0].0;
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -195,10 +195,10 @@ fn test_or_vx_vy() {
  * Set Vx = Vx AND Vy.
  */
 pub fn and_vx_vy(x: X, y: Y) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
-        state.v[x.0].0 = state.v[x.0].0 & state.v[y.0].0;
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+        state.v[x.0].0 &= state.v[y.0].0;
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -233,10 +233,10 @@ fn test_and_vx_vy() {
  * Set Vx = Vx XOR Vy.
  */
 pub fn xor_vx_vy(x: X, y: Y) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
-        state.v[x.0].0 = state.v[x.0].0 ^ state.v[y.0].0;
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+        state.v[x.0].0 ^= state.v[y.0].0;
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -276,7 +276,7 @@ fn test_xor_vx_vy_inner(x: u16, y: u16) {
  * Set Vx = Vx + Vy, set VF = carry.
  */
 pub fn add_vx_vy(x: X, y: Y) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         let (sum, is_carry) = state.v[x.0].0.overflowing_add(state.v[y.0].0);
         let carry: u8 = match is_carry {
             true => 1,
@@ -285,7 +285,7 @@ pub fn add_vx_vy(x: X, y: Y) -> Box<Instruction> {
         state.v[0xF].0 = carry;
         state.v[x.0].0 = sum;
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -331,7 +331,7 @@ fn test_add_vx_vy_inner(x: u16, y: u16, x_val: u8, y_val: u8, carry: bool, resul
  * Set Vx = Vx - Vy, set VF = NOT borrow.
  */
 pub fn sub_vx_vy(x: X, y: Y) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         let (sum, is_carry) = state.v[x.0].0.overflowing_sub(state.v[y.0].0);
         let not_borrow: u8 = match !is_carry {
             true => 1,
@@ -340,7 +340,7 @@ pub fn sub_vx_vy(x: X, y: Y) -> Box<Instruction> {
         state.v[0xF].0 = not_borrow;
         state.v[x.0].0 = sum;
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -392,7 +392,7 @@ fn test_subx_vx_vy_inner(x: u16, y: u16, x_val: u8, y_val: u8, no_borrow: bool, 
  * Set Vx = Vy - Vx, set VF = NOT borrow.
  */
 pub fn subn_vx_vy(x: X, y: Y) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         let (sum, is_carry) = state.v[y.0].0.overflowing_sub(state.v[x.0].0);
         let not_borrow: u8 = match !is_carry {
             true => 1,
@@ -401,7 +401,7 @@ pub fn subn_vx_vy(x: X, y: Y) -> Box<Instruction> {
         state.v[0xF].0 = not_borrow;
         state.v[x.0].0 = sum;
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -422,7 +422,7 @@ fn test_subn_vx_vy_inner(x: u16, y: u16, x_val: u8, y_val: u8, no_borrow: bool, 
  * If the least-significant bit of shifted value is 1, then VF is set to 1, otherwise 0.
  */
 pub fn shr_vx_vy(x: X, y: Y) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         let y = match state.quirks.shift {
             true => x.0,
             false => y.0,
@@ -430,7 +430,7 @@ pub fn shr_vx_vy(x: X, y: Y) -> Box<Instruction> {
         state.v[0xF].0 = state.v[y].0 & 0x01;
         state.v[x.0].0 = state.v[y].0 >> 1;
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -457,7 +457,7 @@ fn test_shr_vx_vy_inner(x: u16, y: u16, x_val: u8, y_val: u8, exp_x: u8, exp_y: 
  * If the most-significant bit of shifted value is 1, then VF is set to 1, otherwise to 0.
  */
 pub fn shl_vx_vy(x: X, y: Y) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         let y = match state.quirks.shift {
             true => x.0,
             false => y.0,
@@ -465,7 +465,7 @@ pub fn shl_vx_vy(x: X, y: Y) -> Box<Instruction> {
         state.v[0xF].0 = (state.v[y].0 >> 7) & 0x01;
         state.v[x.0].0 = state.v[y].0 << 1;
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -526,11 +526,11 @@ fn test_shx_vx_vy_inner(x: u16, y: u16, x_val: u8, y_val: u8, exp_x: u8, exp_y: 
  * Set Vx = Vx + kk.
  */
 pub fn add_vx_kk(x: X, kk: KK) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         // game could overflow it
         state.v[x.0].0 = state.v[x.0].0.wrapping_add(kk.0);
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -562,12 +562,12 @@ fn test_add_vx_kk() {
  * Skip next instruction if Vx != Vy.
  */
 pub fn sne_vx_vy(x: X, y: Y) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         if state.v[x.0].0 != state.v[y.0].0 {
             state.inc_pc_2();
         }
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -612,12 +612,12 @@ fn test_sne_vx_vy_inner(x: u16, y: u16, x_val: u8, y_val: u8, pc_offset: u16) {
  * Skip next instruction if Vx != kk.
  */
 pub fn sne_vx_kk(x: X, kk: KK) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         if state.v[x.0].0 != kk.0 {
             state.inc_pc_2();
         }
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -663,12 +663,12 @@ fn test_snx_vx_kk_inner(x: u16, x_val: u8, byte: u8, pc_offset: u16, op_code: u1
  * Skip next instruction if Vx = kk.
  */
 pub fn se_vx_kk(x: X, kk: KK) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         if state.v[x.0].0 == kk.0 {
             state.inc_pc_2();
         }
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -687,12 +687,12 @@ fn test_se_vx_kk_inner(x: u16, x_val: u8, byte: u8, pc_offset: u16) {
  * Skip next instruction if Vx = Vy.
  */
 pub fn se_vx_vy(x: X, y: Y) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         if state.v[x.0].0 == state.v[y.0].0 {
             state.inc_pc_2();
         }
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -736,9 +736,9 @@ fn test_se_vx_vy_inner(x: u16, y: u16, x_val: u8, y_val: u8, pc_offset: u16) {
  * Jump to location nnn.
  */
 pub fn jp_nnn(nnn: NNN) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         state.pc.0 = nnn.0;
-    });
+    })
 }
 
 #[test]
@@ -770,11 +770,11 @@ fn test_jp_nnn_inner(addr: u16) {
  * Return from a subroutine.
  */
 pub fn ret() -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         state.pc.0 = state.stack[(u8::from(state.sp.0) - 1) as usize];
         state.sp.0 = state.sp.0 - u4::new(1);
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -817,11 +817,11 @@ fn test_ret_inner(stack: Vec<u16>, sp: u8, expected_pc: u16) {
  * Call subroutine at nnn.
  */
 pub fn call_nnn(nnn: NNN) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         state.stack[u8::from(state.sp.0) as usize] = state.pc.0;
         state.sp.0 = (state.sp.0 + u4::new(1)) & u4::new((state.stack.len() - 1) as u8);
         state.pc.0 = nnn.0;
-    });
+    })
 }
 
 #[test]
@@ -856,10 +856,10 @@ fn test_call_nnn_inner(addr: u16) {
  * Set I = nnn.
  */
 pub fn ld_i_nnn(nnn: NNN) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         state.i.0 = nnn.0;
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -879,10 +879,10 @@ fn test_ld_i_nnn() {
  * Jump to location nnn + V0.
  */
 pub fn jp_v0_nnn(nnn: NNN) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         // not sure if wrapping add but https://github.com/mir3z/chip8-emu/blob/master/test/spec/is.spec.js would pass in that case
-        state.pc.0 = (nnn.0.wrapping_add(u12::new(state.v[0].0 as u16)));
-    });
+        state.pc.0 = nnn.0.wrapping_add(u12::new(state.v[0].0 as u16));
+    })
 }
 
 #[test]
@@ -921,11 +921,11 @@ fn test_jp_v0_nnn_inner(v0: u8, addr: u16, expected_pc: u16) {
  * Set Vx = random byte AND kk.
  */
 pub fn rnd_vx_kk(x: X, kk: KK) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         let r: u8 = state.run_rng(); // 0..255
         state.v[x.0].0 = r & kk.0;
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -955,12 +955,12 @@ fn test_rnd_vx_kk_inner(x: u16) {
  * Store BCD representation of Vx in memory locations I, I+1, and I+2.
  */
 pub fn ld_b_vx(x: X) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         state.mem[u16::from(state.i.0) as usize].0 = state.v[x.0].0 / 100;
         state.mem[u16::from(state.i.0 + u12::new(1)) as usize].0 = state.v[x.0].0 % 100 / 10;
         state.mem[u16::from(state.i.0 + u12::new(2)) as usize].0 = state.v[x.0].0 % 10;
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -1002,10 +1002,10 @@ fn test_ld_b_vx_inner(x: u16, x_val: u8, i: u16, digits: Vec<u16>) {
  * Set Vx = delay timer value.
  */
 pub fn ld_vx_dt(x: X) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         state.v[x.0].0 = state.dt.0;
         state.inc_pc_2();
-    });
+    })
 }
 
 
@@ -1042,10 +1042,10 @@ fn test_ld_vx_dt_inner(x: u16, dt: u8) {
  * Set delay timer = Vx.
  */
 pub fn ld_dt_vx(x: X) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         state.dt.0 = state.v[x.0].0;
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -1080,10 +1080,10 @@ fn test_ld_dt_vx_inner(x: u16, x_val: u8) {
  * Set sound timer = Vx.
  */
 pub fn ld_st_vx(x: X) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         state.st.0 = state.v[x.0].0;
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -1119,11 +1119,11 @@ fn test_ld_st_vx_inner(x: u16, x_val: u8) {
  * Set I = I + Vx.
  */
 pub fn add_i_vx(x: X) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         // TODO wrapping?
         state.i.0 = state.i.0.wrapping_add(u12::new(state.v[x.0].0 as u16));
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -1165,7 +1165,7 @@ fn test_add_i_vx_inner(x: u16, x_val: u8, i: u16, result: u16) {
  * The value of the I register will be incremented by X + 1, if load/store quirks are disabled.
  */
 pub fn ld_i_vx(x: X) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         for i in 0..=x.0 { // inclusive
             state.mem[u16::from(state.i.0) as usize + i].0 = state.v[i].0;
         }
@@ -1173,7 +1173,7 @@ pub fn ld_i_vx(x: X) -> Box<Instruction> {
             state.i.0 = state.i.0 + u12::new(x.0 as u16) + u12::new(1);
         }
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -1226,7 +1226,7 @@ fn test_ld_i_vx_inner(x: u16, i_val: u16, i_expected: u16, regs: Vec<u8>, quirks
  * The value of the I register will be incremented by X + 1, if load/store quirks are disabled.
  */
 pub fn ld_vx_i(x: X) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         for i in 0..=x.0 { // inclusive
             state.v[i].0 = state.mem[u16::from(state.i.0) as usize + i].0;
         }
@@ -1234,7 +1234,7 @@ pub fn ld_vx_i(x: X) -> Box<Instruction> {
             state.i.0 = state.i.0 + u12::new(x.0 as u16) + u12::new(1);
         }
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -1286,11 +1286,11 @@ fn test_ld_vx_i_inner(x: u16, i_val: u16, i_expected: u16, mem: Vec<u8>, quirks_
  * Wait for a key press, store the value of the key in Vx.
  */
 pub fn ld_vx_k(x: X) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         state.halted.0 = true;
         state.waiting_kb.0 = true;
         state.waiting_kb_x = Some(x);
-    });
+    })
 }
 
 #[test]
@@ -1319,12 +1319,12 @@ fn test_ld_vx_k() {
  * Skip next instruction if key with the value of Vx is pressed.
  */
 pub fn skp_vx(_x: X) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         if state.keyboard.is_key_pressed(&state.v[_x.0].0) {
             state.inc_pc_2();
         }
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -1352,7 +1352,7 @@ fn test_skp_vx_inner(x: u16, x_val: u8, pressed: bool, key: char, should_skip: b
             let args = args.unwrap();
             cpu.state.v[args.x.0] = args.x_val;
             if (args.pressed) {
-                cpu.state.keyboard.key_down(args.key as usize)
+                cpu.state.keyboard.key_down(&args.key as &u8)
             }
         }),
         post_fn: Some(|state, scope, args| {
@@ -1372,12 +1372,12 @@ fn test_skp_vx_inner(x: u16, x_val: u8, pressed: bool, key: char, should_skip: b
  * Skip next instruction if key with the value of Vx is not pressed.
  */
 pub fn sknp_vx(_x: X) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         if !state.keyboard.is_key_pressed(&state.v[_x.0].0) {
             state.inc_pc_2();
         }
         state.inc_pc_2();
-    });
+    })
 }
 
 #[test]
@@ -1405,7 +1405,7 @@ fn test_sknp_vx_inner(x: u16, x_val: u8, pressed: bool, key: char, should_skip: 
             let args = args.unwrap();
             cpu.state.v[args.x.0] = args.x_val;
             if args.pressed {
-                cpu.state.keyboard.key_down(args.key as usize)
+                cpu.state.keyboard.key_down(&args.key as &u8)
             }
         }),
         post_fn: Some(|state, scope, args| {
@@ -1425,10 +1425,10 @@ fn test_sknp_vx_inner(x: u16, x_val: u8, pressed: bool, key: char, should_skip: 
  * Set I = location of sprite for digit Vx.
  */
 pub fn ld_f_vx(x: X) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         state.i = I(u12::new(state.v[x.0].0 as u16 * 5));
         state.inc_pc_2();
-    });
+    })
 }
 
 #[cfg(test)]
@@ -1482,7 +1482,7 @@ test_LD_F_Vx: function (cpu, params) {
  * Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
  */
 pub fn drw_vx_vy_n(x: X, y: Y, n: N) -> Box<Instruction> {
-    return Box::new(move |state: &mut CPUState, screen_draw: &mut dyn Screen| {
+    Box::new(move |state: &mut CPUState, screen_draw: &mut dyn Screen| {
         state.v[0xF] = V(0);
         for hline in 0..n.0 {
             let membyte = state.mem[u16::from(state.i.0 + u12::new(hline)) as usize];
@@ -1499,5 +1499,5 @@ pub fn drw_vx_vy_n(x: X, y: Y, n: N) -> Box<Instruction> {
         }
         state.repaint.0 = true;
         state.inc_pc_2();
-    });
+    })
 }

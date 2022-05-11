@@ -1,16 +1,16 @@
-use std::future::Future;
-use std::time::Duration;
+
+
 use callback_future::CallbackFuture;
 
-use futures::{future::BoxFuture, FutureExt};
+use futures::{FutureExt};
 use futures::future::LocalBoxFuture;
-use tokio::time::delay_for;
+
 use wasm_bindgen::JsCast;
 use web_sys::window;
 use web_sys::CanvasRenderingContext2d;
 
 use crate::cpu_instructions::{X, Y};
-use crate::screen::{IsCollision, Screen, SCREEN_HEIGHT, SCREEN_WIDTH, ScreenDraw, ScreenState, make_zero_screen_state, toggle_pixel};
+use crate::screen::{IsCollision, Screen, ScreenDraw, ScreenState, make_zero_screen_state, toggle_pixel};
 use wasm_bindgen::prelude::*;
 
 pub struct WasmCanvasScreen {
@@ -21,14 +21,14 @@ pub struct WasmCanvasScreen {
 
 impl ScreenDraw for WasmCanvasScreen {
     fn toggle_pixel(&mut self, x: X, y: Y) -> IsCollision {
-        let is_collision = toggle_pixel(&mut self.state, x.clone(), y.clone());
+        let is_collision = toggle_pixel(&mut self.state, x, y.clone());
         self.draw_pixel(x, y, !is_collision.0);
         is_collision
     }
     fn repaint(&mut self) {
         self.state.iter().enumerate().for_each(|(y, r)| {
             r.iter().enumerate().for_each(|(x, c)| {
-                self.draw_pixel(X(x), Y(y), c.clone());
+                self.draw_pixel(X(x), Y(y), *c);
             });
         });
     }
@@ -64,7 +64,7 @@ impl WasmCanvasScreen {
         let (width, height) = self.get_canvas_size();
         let scale_x = width as f32 / self.get_width() as f32;
         let scale_y = height as f32 / self.get_height() as f32;
-        return (scale_x, scale_y);
+        (scale_x, scale_y)
     }
     fn draw_pixel(&self, x: X, y: Y, yes: bool) {
         let (scale_x, scale_y) = self.get_canvas_scale();

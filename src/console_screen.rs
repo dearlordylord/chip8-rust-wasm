@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use futures::{Future, future::BoxFuture, FutureExt};
+use futures::{FutureExt};
 use futures::future::LocalBoxFuture;
-use tokio::time::{Delay, delay_for};
+use tokio::time::{delay_for};
 
 use crate::cpu_instructions::{X, Y};
 use crate::screen::{IsCollision, make_zero_screen_state, Screen, SCREEN_HEIGHT, SCREEN_WIDTH, ScreenDraw, ScreenState, toggle_pixel};
