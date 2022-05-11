@@ -6,7 +6,7 @@ use std::thread::sleep;
 use std::time::Duration;
 use anyhow::Result;
 use fluvio_wasm_timer::{Delay};
-
+use crate::keyboard::PC_KEY_MAP;
 
 use rand::prelude::ThreadRng;
 use rand::{Rng, RngCore, SeedableRng};
@@ -69,6 +69,8 @@ pub(crate) struct ST(pub(crate) MemPrimitive);
 pub(crate) struct Repaint(pub(crate) bool);
 #[derive(Clone, Debug)]
 pub(crate) struct Halted(pub(crate) bool);
+#[derive(Clone, Debug)]
+pub(crate) struct WaitingKb(pub(crate) bool);
 
 #[derive(Clone, Debug)]
 pub struct CPUState {
@@ -90,6 +92,8 @@ pub struct CPUState {
     pub(crate) sp: SP,
     pub(crate) repaint: Repaint,
     pub(crate) halted: Halted,
+    pub(crate) waiting_kb: WaitingKb,
+    pub(crate) waiting_kb_x: Option<X>,
     // timers
     pub(crate) dt: DT,
     pub(crate) st: ST,
@@ -147,6 +151,7 @@ impl CPUState {
 }
 
 use wasm_bindgen::prelude::*;
+use crate::cpu_instructions::X;
 
 #[wasm_bindgen]
 pub struct CPU {
@@ -176,6 +181,8 @@ impl CPU {
                 sp: SP(u4::new(0)),
                 repaint: Repaint(false),
                 halted: Halted(false),
+                waiting_kb: WaitingKb(false),
+                waiting_kb_x: None,
                 dt: DT(0),
                 st: ST(0),
                 quirks: CPUQuirks::new(),
@@ -211,8 +218,11 @@ impl CPU {
     }
 
     pub fn is_done(&self) -> bool {
-        // by a program or by a user
-        self.state.halted.0 || self.stopped
+        self.stopped
+    }
+
+    pub fn is_paused(&self) -> bool {
+        self.state.halted.0
     }
 
     pub fn stop(&mut self) {
@@ -249,6 +259,35 @@ impl CPU {
 
     fn execute(state: &mut CPUState, screen_draw: &mut dyn Screen, op: impl Fn(&mut CPUState, &mut dyn Screen) -> ()) {
         op(state, screen_draw);
+    }
+
+    pub fn key_down(&mut self, kbk: usize) {
+        use web_sys::console;
+        let k = PC_KEY_MAP.get(&kbk);
+        if k.is_none() {
+            return;
+        }
+        let k = k.unwrap();
+        self.state.keyboard.key_down(k);
+        // todo or keyup?
+        if self.state.waiting_kb.0 {
+            let x = self.state.waiting_kb_x.as_ref().expect("waiting for kb but no X");
+            self.state.v[x.0] = V('6' as u8);
+            self.state.inc_pc_2();
+            self.state.halted.0 = false;
+            self.state.waiting_kb.0 = false;
+            self.state.waiting_kb_x = None;
+
+        }
+    }
+
+    pub fn key_up(&mut self, k: usize) {
+        let k = PC_KEY_MAP.get(&k);
+        if k.is_none() {
+            return;
+        }
+        let k = k.unwrap();
+        self.state.keyboard.key_up(k);
     }
 
 }

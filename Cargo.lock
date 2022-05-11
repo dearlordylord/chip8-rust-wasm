@@ -567,6 +567,7 @@ dependencies = [
  "fluvio-wasm-timer",
  "futures",
  "getrandom",
+ "lazy_static",
  "log",
  "mockall",
  "rand",

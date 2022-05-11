@@ -8,6 +8,8 @@ mod cpu_instructions;
 mod test_utils;
 mod keyboard;
 mod wasm_canvas_screen;
+#[macro_use]
+extern crate lazy_static;
 
 use std::fs::File;
 use std::io::Read;

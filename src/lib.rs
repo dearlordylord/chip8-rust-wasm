@@ -9,6 +9,8 @@ mod test_utils;
 mod keyboard;
 mod wasm_canvas_screen;
 use wasm_bindgen::prelude::*;
+#[macro_use]
+extern crate lazy_static;
 
 use std::fs::File;
 use std::io::Read;
@@ -66,16 +68,12 @@ pub struct ProgramHandle {
 
 #[wasm_bindgen]
 pub fn init_program(program: &[u8], canvas: JsValue) -> Result<CPU, JsValue> {
-    use web_sys::console;
-
     match canvas.dyn_into::<web_sys::HtmlCanvasElement>() {
         Ok(canvas) => {
             let mut cpu = CPU::new(Box::new(WasmCanvasScreen::new(canvas)));
-            console::log_1(&program.to_vec().iter().fold(String::new(), |a, b| a + b.to_string().trim() + ", ").to_string().into());
             cpu.load_program(program.to_vec());
             return Ok(cpu);
         }
         Err(_) => Err(JsValue::from_str("canvas argument not a HtmlCanvas")),
     }
-
 }

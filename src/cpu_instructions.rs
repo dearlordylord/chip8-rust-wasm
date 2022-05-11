@@ -3,10 +3,11 @@ use ux::{u12, u4};
 
 use crate::screen::{Screen, ScreenDraw};
 use crate::cpu::{CPUState, I, V, PC, SP, DT, MemValue};
+use crate::keyboard::PC_KEY_MAP;
 
 pub type Instruction = dyn Fn(&mut CPUState, &mut dyn Screen);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct X(pub usize);
 
 impl Rem for X {
@@ -1287,12 +1288,8 @@ fn test_ld_vx_i_inner(x: u16, i_val: u16, i_expected: u16, mem: Vec<u8>, quirks_
 pub fn ld_vx_k(x: X) -> Box<Instruction> {
     return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
         state.halted.0 = true;
-        // TODO
-        // cpu.keyboard.onNextKeyPressed = function (key) {
-        // state.v[x.0] = V('6' as u8);
-        // state.inc_pc_2();
-        // state.halted.0 = false;
-        // };
+        state.waiting_kb.0 = true;
+        state.waiting_kb_x = Some(x);
     });
 }
 
@@ -1323,7 +1320,7 @@ fn test_ld_vx_k() {
  */
 pub fn skp_vx(_x: X) -> Box<Instruction> {
     return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
-        if state.keyboard.is_key_pressed(state.v[_x.0].0 as usize) {
+        if state.keyboard.is_key_pressed(&state.v[_x.0].0) {
             state.inc_pc_2();
         }
         state.inc_pc_2();
@@ -1376,7 +1373,7 @@ fn test_skp_vx_inner(x: u16, x_val: u8, pressed: bool, key: char, should_skip: b
  */
 pub fn sknp_vx(_x: X) -> Box<Instruction> {
     return Box::new(move |state: &mut CPUState, _screen_draw: &mut dyn Screen| {
-        if !state.keyboard.is_key_pressed(state.v[_x.0].0 as usize) {
+        if !state.keyboard.is_key_pressed(&state.v[_x.0].0) {
             state.inc_pc_2();
         }
         state.inc_pc_2();
