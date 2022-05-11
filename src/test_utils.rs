@@ -1,22 +1,29 @@
 use crate::screen::*;
 use futures::{future::BoxFuture, future::ready};
+use futures::future::LocalBoxFuture;
 use crate::cpu::{CPU, MemValue, CPUState, V, PC, SP, I, DT};
 use ux::{u12, u4};
 use crate::cpu_instructions::{X, Y};
+use mockall::*;
+use mockall::predicate::*;
 
-pub struct TestScreen<'a> {
-    pub screen_draw: &'a mut MockScreenDraw,
-}
+mock! {
+   pub TestScreen {}
+   impl ScreenDraw for TestScreen {
+        pub fn toggle_pixel(&mut self, x: X, y: Y) -> IsCollision;
+        pub fn repaint(&mut self);
+        pub fn clear(&mut self);
+        pub fn get_width(&self) -> usize;
+        pub fn get_height(&self) -> usize;
+    }
 
-impl<'a> Screen for TestScreen<'a> {
-    fn request_animation_frame<'b>(&'b mut self) -> BoxFuture<'b, &'b mut dyn ScreenDraw> {
-        // as &mut dyn Screen
-        Box::pin(ready(self.screen_draw as &mut dyn Screen))
+    impl Screen for TestScreen {
+        pub fn request_animation_frame(&self) -> LocalBoxFuture<'static, ()>;
     }
 }
 
 pub struct TestScope<'a> {
-    pub screen_draw: &'a mut MockScreenDraw,
+    pub screen_draw: &'a mut MockTestScreen,
     pub old_cpu_state: CPUState,
 }
 
@@ -112,8 +119,7 @@ impl Default for TestCycleParams {
 }
 
 pub(crate) fn test_cycle(params: TestCycleParams) {
-    let mut screen_draw = MockScreenDraw::new();
-    let screen = TestScreen { screen_draw: &mut screen_draw };
+    let screen = MockTestScreen::new();
     let cpu = &mut CPU::new(Box::new(screen));
     cpu.state.mem[cpu.state.pci()] = MemValue(params.op_code.to_be_bytes()[0]);
     cpu.state.mem[cpu.state.pci() + 1] = MemValue(params.op_code.to_be_bytes()[1]);
@@ -121,7 +127,7 @@ pub(crate) fn test_cycle(params: TestCycleParams) {
         Some(f) => f(cpu, params.op_args.clone()),
         None => {}
     }
-    let mut screen_draw2 = MockScreenDraw::new();
+    let mut screen_draw2 = MockTestScreen::new();
     let old_cpu_state = cpu.state.clone();
     (params.expectations)(TestScope {
         screen_draw: &mut screen_draw2,

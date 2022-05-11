@@ -235,7 +235,7 @@ impl CPU {
         // }
     }
 
-    fn step(state: &mut CPUState, screen_draw: &mut dyn Screen) -> StepResult {
+    pub(crate) fn step(state: &mut CPUState, screen_draw: &mut dyn Screen) -> StepResult {
         let opcode = state.fetch();
         let op = decode(opcode)?;
         // TODO result type, error type

@@ -15,7 +15,6 @@ pub fn toggle_pixel(state: &mut ScreenState, x: X, y: Y) -> IsCollision {
     IsCollision(is_collision)
 }
 
-#[automock]
 pub trait ScreenDraw {
     fn toggle_pixel(&mut self, x: X, y: Y) -> IsCollision;
     fn repaint(&mut self);
