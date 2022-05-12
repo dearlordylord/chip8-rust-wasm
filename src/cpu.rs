@@ -1,11 +1,14 @@
 use std::{println};
 use std::borrow::BorrowMut;
 use std::convert::{TryFrom};
-use std::ops::{Add, Sub};
+use std::future::Future;
+use std::ops::{Add, DerefMut, Sub};
+use std::sync::{Arc, Mutex};
 
 use std::time::Duration;
 use anyhow::Result;
 use fluvio_wasm_timer::{Delay};
+use futures::future::BoxFuture;
 use crate::keyboard::PC_KEY_MAP;
 
 
@@ -153,7 +156,6 @@ impl CPUState {
 use wasm_bindgen::prelude::*;
 use crate::cpu_instructions::X;
 
-#[wasm_bindgen]
 pub struct CPU {
     pub(crate) state: CPUState,
     stopped: bool,
@@ -166,9 +168,8 @@ fn load_font_set(mem: &mut Mem) {
     }
 }
 
-#[wasm_bindgen]
 impl CPU {
-    pub(crate) fn new(screen: Box<dyn Screen>) -> Self {
+    pub fn new(screen: Box<dyn Screen>) -> Self {
         let mut mem = [MemValue(0); MEM_SIZE];
         load_font_set(&mut mem);
         Self {
@@ -193,26 +194,34 @@ impl CPU {
             stopped: false,
         }
     }
-    pub(crate) fn load_program(&mut self, data: Vec<u8>) {
+    pub fn load_program(&mut self, data: Vec<u8>) {
         assert!(u12::max_value().sub(u12::new(PROGRAM_START_ADDR)) >= u12::new(u16::try_from(data.len()).expect("Data len takes more than u16")));
         for (i, x) in data.iter().enumerate() {
             self.state.mem[usize::from(PROGRAM_START_ADDR) + i].0 = *x;
         }
     }
 
-    // https://github.com/rustwasm/wasm-bindgen/issues/1858 , hence "self"
-    pub async fn run(mut self) -> Option<CPU> {
-        Delay::new(Duration::new(1 / SPEED, 0)).await;
-        if self.is_done() {
-            return None;
-        }
-        self.screen.request_animation_frame().await;
-        match CPU::cycle(&mut self.state, &mut *self.screen) {
-            Ok(()) => Some(self),
-            Err(e) => {
-                println!("Error during cycle, {}. STOPPING", e);
-                self.stop();
-                None
+    // for spawning locally
+    // wasm compatible - awaits to free the thread instead of blocking
+    // todo maybe get delay constructor as an argument
+    // TODO do something with wasm_mutex::Mutex requirement\
+    pub async fn run(this: Arc<wasm_mutex::Mutex<CPU>>) {
+        let arc = this.clone();
+        loop {
+            Delay::new(Duration::new(1 / SPEED, 0)).await;
+            let mut guard = arc.lock().await;
+            let guard: &mut CPU = guard.deref_mut(); // for compiler to understand splitting borrow later
+            if guard.is_done() {
+                break;
+            }
+            // TODO locks for too long?
+            guard.screen.request_animation_frame().await;
+            match CPU::cycle(&mut guard.state, &mut *guard.screen) {
+                Ok(()) => (),
+                Err(e) => {
+                    println!("Error during cycle, {}. STOPPING", e);
+                    guard.stop();
+                }
             }
         }
     }

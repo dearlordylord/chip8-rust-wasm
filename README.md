@@ -7,7 +7,8 @@ https://rustwasm.github.io/wasm-pack/book/tutorials/npm-browser-packages/packagi
 The app exposes an init method and CPU type
 
 ```typescript
-import initWasm, { CPU, init_program as initChip8 } from '@firfi/rust-wasm-chip8';
+import initWasm, { WasmProgram, init_program as initChip8 } from '@firfi/rust-wasm-chip8';
+
 
 const init = async () => {
 
@@ -22,17 +23,26 @@ const init = async () => {
     const romData = await loadRom("BLINKY");
     const canvas = document.getElementById("canvas");
     
-    // the object will be moved each run(), hence "let"
-    let chip8 = initChip8(romData, canvas);
-    
-    while (!chip8.is_done()) {
-      chip8 = await chip8.run();
-      // and calling chip8.stop() would set is_done() to true
-      // also calling key_up and key_down between iterations would allow to control the emulator 
-      // sic! all calls must be done on an actual instance of chip8 
-    }
+    const cpu = initChip8(romData, canvas);
+    cpu.run(); // will run asynchronously
+    initKeyboardListeners(cpu); // wire up controls
     
 }
+
+const initKeyboardListeners = (cpu: WasmProgram) => {
+  const makeCb = (kind: 'up' | 'down') => (e: KeyboardEvent) => {
+    cpu[kind === 'up' ? 'key_up' : 'key_down'](e.which || e.keyCode);
+  }
+  const keyDownCb = makeCb('down');
+  const keyUpCb = makeCb('up');
+  document.addEventListener('keydown', keyDownCb);
+  document.addEventListener('keyup', keyUpCb);
+  return () => {
+    document.removeEventListener('keydown', keyDownCb);
+    document.removeEventListener('keyup', keyUpCb);
+  };
+}
+
 ```
 
 Demo deployed on http://chip8-rust-wasm-frontend.apps.loskutoff.com

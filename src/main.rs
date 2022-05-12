@@ -13,6 +13,8 @@ extern crate lazy_static;
 
 use std::fs::File;
 use std::io::Read;
+use std::sync::Arc;
+use wasm_mutex::Mutex;
 use cpu::CPU;
 use crate::console_screen::ConsoleScreen;
 
@@ -20,9 +22,8 @@ use crate::console_screen::ConsoleScreen;
 async fn main() -> std::io::Result<()> {
     let program = read_rom();
     let mut cpu = CPU::new(Box::new(ConsoleScreen::new()));
-    println!("{:?}", program);
     cpu.load_program(program);
-    cpu.run().await;
+    CPU::run(Arc::new(Mutex::new(cpu))).await;
     Ok(())
 }
 
