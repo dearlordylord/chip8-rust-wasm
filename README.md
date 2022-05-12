@@ -1,6 +1,6 @@
 Chip8 emulator - standalone (console output) and WASM lib
 
-Build: `wasm-pack build --target web --out-dir pkg`
+Build: `wasm-pack build --scope firfi --target web`
 
 https://rustwasm.github.io/wasm-pack/book/tutorials/npm-browser-packages/packaging-and-publishing.html
 
