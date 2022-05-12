@@ -34,7 +34,6 @@ pub struct WasmProgram {
     // #[wasm_bindgen(skip)]
     cpu: Arc<Mutex<CPU>>,
 }
-use web_sys::console;
 
 // TODO DRY locks (marcos?)
 #[wasm_bindgen]
@@ -46,7 +45,6 @@ impl WasmProgram {
         })
     }
     pub fn stop(&mut self) {
-        console::log_1(&"before stop".into());
         let clone = self.cpu.clone();
         spawn_local(async move {
             let mut guard = clone.lock().await;
@@ -56,10 +54,8 @@ impl WasmProgram {
 
     pub fn key_down(&mut self, k: usize) {
         let clone = self.cpu.clone();
-        console::log_1(&format!("key_down before {}", &k).into());
         spawn_local(async move {
             let mut guard = clone.lock().await;
-            console::log_1(&format!("key_down after {}", &k).into());
             guard.key_down(k);
         })
     }
