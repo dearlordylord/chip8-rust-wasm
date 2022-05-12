@@ -2,6 +2,8 @@ Chip8 emulator - standalone (console output) and WASM lib
 
 Build: `wasm-pack build --scope firfi --target web`
 
+Publish `cd pkg && npm publish --access=public`
+
 https://rustwasm.github.io/wasm-pack/book/tutorials/npm-browser-packages/packaging-and-publishing.html
 
 The app exposes an init method and CPU type
