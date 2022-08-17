@@ -35,7 +35,7 @@ pub struct WasmProgram {
     cpu: Arc<Mutex<CPU>>,
 }
 
-// TODO DRY locks (marcos?)
+// TODO DRY locks (macros?)
 #[wasm_bindgen]
 impl WasmProgram {
     pub fn run(&self) {
@@ -71,7 +71,7 @@ impl WasmProgram {
 
 #[wasm_bindgen]
 pub fn init_program(program: &[u8], canvas: JsValue) -> Result<WasmProgram, JsValue> {
-    match canvas.dyn_into::<web_sys::HtmlCanvasElement>() {
+    match canvas.dyn_into::<web_sys::CanvasRenderingContext2d>() {
         Ok(canvas) => {
             let mut cpu = CPU::new(Box::new(WasmCanvasScreen::new(canvas)));
             cpu.load_program(program.to_vec());

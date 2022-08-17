@@ -15,7 +15,7 @@ use wasm_bindgen::prelude::*;
 
 pub struct WasmCanvasScreen {
     state: ScreenState,
-    canvas: web_sys::HtmlCanvasElement,
+    canvas: web_sys::CanvasRenderingContext2d,
 }
 
 
@@ -43,22 +43,17 @@ impl ScreenDraw for WasmCanvasScreen {
 }
 
 impl WasmCanvasScreen {
-    pub fn new(canvas: web_sys::HtmlCanvasElement) -> Self {
+    pub fn new(canvas: web_sys::CanvasRenderingContext2d) -> Self {
         Self {
             state: make_zero_screen_state(),
             canvas,
         }
     }
-    fn get_canvas_context(&self) -> CanvasRenderingContext2d {
-        self.canvas
-            .get_context("2d")
-            .unwrap()
-            .unwrap()
-            .dyn_into::<web_sys::CanvasRenderingContext2d>()
-            .unwrap()
+    fn get_canvas_context(&self) -> &CanvasRenderingContext2d {
+        &self.canvas
     }
     fn get_canvas_size(&self) -> (u32, u32) {
-        (self.canvas.width(), self.canvas.height())
+        (self.canvas.canvas().unwrap().width(), self.canvas.canvas().unwrap().height())
     }
     fn get_canvas_scale(&self) -> (f32, f32) {
         let (width, height) = self.get_canvas_size();

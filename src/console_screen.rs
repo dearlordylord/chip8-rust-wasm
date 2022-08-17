@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use futures::{FutureExt};
 use futures::future::LocalBoxFuture;
-use tokio::time::{delay_for};
+use tokio::time::{sleep};
 
 use crate::cpu_instructions::{X, Y};
 use crate::screen::{IsCollision, make_zero_screen_state, Screen, SCREEN_HEIGHT, SCREEN_WIDTH, ScreenDraw, ScreenState, toggle_pixel};
@@ -66,6 +66,6 @@ impl ConsoleScreen {
 
 impl Screen for ConsoleScreen {
     fn request_animation_frame(&self) -> LocalBoxFuture<()> {
-        delay_for(Duration::new(0, 10000)).boxed_local()
+        sleep(Duration::new(0, 10000)).boxed_local()
     }
 }
