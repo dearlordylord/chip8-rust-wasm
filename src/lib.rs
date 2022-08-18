@@ -16,14 +16,9 @@ use wasm_bindgen::prelude::*;
 #[macro_use]
 extern crate lazy_static;
 
-
-
-
-
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 use wasm_mutex::Mutex;
-
 
 use cpu::CPU;
 

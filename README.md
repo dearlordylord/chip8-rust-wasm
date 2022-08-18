@@ -25,7 +25,7 @@ const init = async () => {
     const romData = await loadRom("BLINKY");
     const canvas = document.getElementById("canvas");
     
-    const cpu = initChip8(romData, canvas);
+    const cpu = initChip8(romData, canvas.getContext("2d"));
     cpu.run(); // will run asynchronously
     initKeyboardListeners(cpu); // wire up controls
     

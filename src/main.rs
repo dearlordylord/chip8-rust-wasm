@@ -18,7 +18,7 @@ use wasm_mutex::Mutex;
 use cpu::CPU;
 use crate::console_screen::ConsoleScreen;
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> std::io::Result<()> {
     let program = read_rom();
     let mut cpu = CPU::new(Box::new(ConsoleScreen::new()));
