@@ -48,3 +48,7 @@ const initKeyboardListeners = (cpu: WasmProgram) => {
 ```
 
 Demo deployed on http://chip8-rust-wasm-frontend.apps.loskutoff.com
+
+## TODO
+
+use https://docs.rs/gloo-timers/latest/gloo_timers for timeouts
